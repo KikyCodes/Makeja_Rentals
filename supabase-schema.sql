@@ -670,7 +670,7 @@ CREATE INDEX idx_notifications_unread     ON notifications(user_id) WHERE is_rea
 -- property_views
 CREATE INDEX idx_views_property_time      ON property_views(property_id, viewed_at DESC);
 CREATE INDEX idx_views_user               ON property_views(user_id) WHERE user_id IS NOT NULL;
-CREATE INDEX idx_views_daily              ON property_views(property_id, DATE(viewed_at));
+-- idx_views_daily removed: DATE(timestamptz) is not IMMUTABLE in PostgreSQL
 
 -- reports
 CREATE INDEX idx_reports_status           ON reports(status, created_at DESC);

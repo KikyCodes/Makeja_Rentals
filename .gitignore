@@ -49,3 +49,6 @@ next-env.d.ts
 **/*.key/
 **/*.p12/
 **/*.pfx/
+
+# Local Netlify folder
+.netlify
