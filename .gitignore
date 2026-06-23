@@ -52,3 +52,11 @@ next-env.d.ts
 
 # Local Netlify folder
 .netlify
+
+# Local admin/migration scripts (contain API tokens — never push)
+run-schema.mjs
+run-roommate-migration.mjs
+apikeys.json
+response.txt
+deno.lock
+projects.json

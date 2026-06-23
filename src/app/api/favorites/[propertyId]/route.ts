@@ -1,24 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
 
-/** Shared in-memory store (same module-scope Map as favorites/route.ts won't be shared in Next.js).
- *  In production this would call Supabase. For demo we use localStorage on the client. */
-
-/** POST /api/favorites/:propertyId  — add to favorites */
+/** POST /api/favorites/:propertyId — add property to favorites */
 export async function POST(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ propertyId: string }> }
 ) {
   const { propertyId } = await params;
-  // In production: INSERT INTO favorites (user_id, property_id) VALUES (...)
-  return NextResponse.json({ success: true, propertyId, action: "added" });
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { error } = await supabase
+    .from("favorites")
+    .upsert(
+      { user_id: user.id, property_id: propertyId },
+      { onConflict: "user_id,property_id", ignoreDuplicates: true }
+    );
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, favorited: true });
 }
 
-/** DELETE /api/favorites/:propertyId  — remove from favorites */
+/** DELETE /api/favorites/:propertyId — remove property from favorites */
 export async function DELETE(
-  req: NextRequest,
+  _req: NextRequest,
   { params }: { params: Promise<{ propertyId: string }> }
 ) {
   const { propertyId } = await params;
-  // In production: DELETE FROM favorites WHERE user_id = ? AND property_id = ?
-  return NextResponse.json({ success: true, propertyId, action: "removed" });
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const { error } = await supabase
+    .from("favorites")
+    .delete()
+    .eq("user_id", user.id)
+    .eq("property_id", propertyId);
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, favorited: false });
 }

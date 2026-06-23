@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
   Heart, MapPin, Bath, Wifi, ShieldCheck, Eye, Bed, Zap, School,
@@ -10,6 +11,7 @@ import {
 } from "lucide-react";
 import { cn, formatPrice, formatPropertyType } from "@/lib/utils";
 import { Badge } from "@/components/ui/Badge";
+import { useAuth } from "@/context/AuthContext";
 import type { Property } from "@/types";
 
 interface PropertyCardProps {
@@ -25,16 +27,40 @@ export default function PropertyCard({
   index = 0,
   onFavoriteToggle,
 }: PropertyCardProps) {
+  const { user } = useAuth();
+  const router = useRouter();
   const [liked, setLiked] = useState(property.is_favorited ?? false);
+  const [toggling, setToggling] = useState(false);
   const primaryImage = property.images?.[0];
 
-  const handleFavorite = (e: React.MouseEvent) => {
+  const handleFavorite = async (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+
+    // If not logged in, redirect to login with return URL
+    if (!user) {
+      router.push(`/auth/login?next=/saved`);
+      return;
+    }
+
+    if (toggling) return;
+    setToggling(true);
+
     const next = !liked;
     setLiked(next);
     onFavoriteToggle?.(property.id, next);
-    fetch(`/api/favorites/${property.id}`, { method: next ? "POST" : "DELETE" }).catch(() => {});
+
+    try {
+      await fetch(`/api/favorites/${property.id}`, {
+        method: next ? "POST" : "DELETE",
+      });
+    } catch {
+      // Revert on error
+      setLiked(!next);
+      onFavoriteToggle?.(property.id, !next);
+    } finally {
+      setToggling(false);
+    }
   };
 
   const distanceLabel =
@@ -153,12 +179,13 @@ export default function PropertyCard({
               : <><XCircle className="w-2.5 h-2.5" /> Taken</>}
           </div>
 
-          {/* Favorite */}
+          {/* Favorite — auth-aware */}
           <button
             onClick={handleFavorite}
             aria-label={liked ? "Remove from saved" : "Save property"}
+            disabled={toggling}
             className={cn(
-              "absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 focus-ring",
+              "absolute top-3 right-3 w-8 h-8 rounded-full flex items-center justify-center transition-all duration-200 focus-ring disabled:opacity-60",
               liked ? "bg-red-500 text-white shadow-md scale-110" : "glass text-white hover:bg-red-500 hover:scale-110"
             )}
           >

@@ -84,6 +84,33 @@ export interface RoommatePost {
   is_active: boolean;
   created_at: string;
   user?: Profile;
+  // Extended lifestyle fields
+  age?: number | null;
+  gender?: "male" | "female" | "other" | null;
+  occupation?: string | null;
+  university?: string | null;
+  smoking_pref?: "yes" | "no" | "occasionally" | "outside_only";
+  drinking_pref?: "yes" | "no" | "occasionally";
+  pets_pref?: "yes" | "no" | "small_pets";
+  cleanliness?: "very_clean" | "clean" | "moderate" | "relaxed";
+  sleep_schedule?: "early_bird" | "night_owl" | "flexible";
+  profile_photo_url?: string | null;
+  views_count?: number;
+  messages_count?: number;
+  compatibility_score?: number; // computed, not stored
+}
+
+export interface RoommateMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  post_id: string | null;
+  content: string;
+  is_read: boolean;
+  read_at?: string | null;
+  created_at: string;
+  sender?: Profile;
+  receiver?: Profile;
 }
 
 export interface Message {
