@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
-import PropertiesApprovalClient from "@/components/admin/PropertiesApprovalClient";
+import PropertyManagementClient from "@/components/admin/PropertyManagementClient";
 
-export const metadata: Metadata = { title: "Admin — Property Approval" };
+export const metadata: Metadata = { title: "Admin — Properties" };
 
 export default function AdminPropertiesPage() {
-  return <PropertiesApprovalClient />;
+  return <PropertyManagementClient />;
 }

@@ -26,9 +26,9 @@ interface Props {
 }
 
 const NAV = [
-  { href: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
+  { href: "/admin/dashboard", label: "Dashboard", icon: LayoutDashboard, end: true },
   { href: "/admin/users", label: "Users", icon: Users, badge: "users" },
-  { href: "/admin/properties", label: "Property Approval", icon: Building2, badge: "properties" },
+  { href: "/admin/properties", label: "Properties", icon: Building2, badge: "properties" },
   { href: "/admin/verifications", label: "Verifications", icon: BadgeCheck, badge: "verifications" },
   { href: "/admin/content", label: "Content Moderation", icon: Flag, badge: "content" },
   { href: "/admin/reports", label: "Reports", icon: FileText, badge: "reports" },

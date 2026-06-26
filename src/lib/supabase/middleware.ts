@@ -33,13 +33,37 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Protected routes — redirect unauthenticated users to login
-  const protectedPaths = ["/dashboard", "/admin", "/saved"];
+  const protectedPaths = ["/dashboard", "/saved"];
   const isProtected = protectedPaths.some((p) => pathname.startsWith(p));
   if (isProtected && !user) {
     const loginUrl = request.nextUrl.clone();
     loginUrl.pathname = "/auth/login";
     loginUrl.searchParams.set("next", pathname);
     return NextResponse.redirect(loginUrl);
+  }
+
+  // Admin routes — require admin role
+  // Allow /admin/login through without auth check
+  if (pathname.startsWith("/admin") && pathname !== "/admin/login") {
+    if (!user) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/admin/login";
+      return NextResponse.redirect(loginUrl);
+    }
+
+    // Check admin role in profiles table
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("id", user.id)
+      .single();
+
+    if (!profile || profile.role !== "admin") {
+      const deniedUrl = request.nextUrl.clone();
+      deniedUrl.pathname = "/admin/login";
+      deniedUrl.searchParams.set("error", "access_denied");
+      return NextResponse.redirect(deniedUrl);
+    }
   }
 
   // Redirect already-authenticated users away from auth pages
