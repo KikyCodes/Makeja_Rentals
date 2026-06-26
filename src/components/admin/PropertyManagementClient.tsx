@@ -14,8 +14,10 @@ import { cn } from "@/lib/utils";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
+import type { PropertyImage } from "@/types";
+
 interface PropertyWithImages extends Property {
-  images: { id: string; url: string; is_primary: boolean; order: number }[];
+  images: PropertyImage[];
 }
 
 // ─── Image Uploader ───────────────────────────────────────────────────────────
@@ -338,17 +340,17 @@ function PropertyForm({
         <div className="flex flex-wrap gap-2 mt-1">
           {AMENITIES_LIST.map((a) => (
             <button
-              key={a.value}
+              key={a}
               type="button"
-              onClick={() => toggleAmenity(a.value)}
+              onClick={() => toggleAmenity(a)}
               className={cn(
                 "text-xs px-3 py-1.5 rounded-full border font-medium transition-colors",
-                form.amenities.includes(a.value)
+                form.amenities.includes(a)
                   ? "bg-indigo-500 border-indigo-500 text-white"
                   : "border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:border-indigo-400"
               )}
             >
-              {a.label}
+              {a}
             </button>
           ))}
         </div>
