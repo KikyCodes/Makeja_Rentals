@@ -38,14 +38,12 @@ function AdminLoginForm() {
         return;
       }
 
-      // Verify admin role
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", data.user.id)
-        .single();
+      // Check admin role from app_metadata (embedded in JWT — no extra DB query needed)
+      const isAdmin =
+        data.user.app_metadata?.role === "admin" ||
+        (data.user.app_metadata as Record<string, unknown>)?.role === "admin";
 
-      if (!profile || profile.role !== "admin") {
+      if (!isAdmin) {
         await supabase.auth.signOut();
         setError("This account does not have admin access.");
         return;

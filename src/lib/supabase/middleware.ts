@@ -51,14 +51,10 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(loginUrl);
     }
 
-    // Check admin role in profiles table
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("id", user.id)
-      .single();
+    // Check admin role from app_metadata (embedded in JWT — reliable, no extra DB query)
+    const isAdmin = (user.app_metadata as Record<string, unknown>)?.role === "admin";
 
-    if (!profile || profile.role !== "admin") {
+    if (!isAdmin) {
       const deniedUrl = request.nextUrl.clone();
       deniedUrl.pathname = "/admin/login";
       deniedUrl.searchParams.set("error", "access_denied");
