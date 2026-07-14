@@ -581,13 +581,22 @@ export default function PropertyManagementClient() {
     if (search) params.set("search", search);
     if (availFilter) params.set("available", availFilter);
 
-    const res = await fetch(`/api/admin/properties/manage?${params}`);
-    if (!res.ok) { setError("Failed to load properties."); setLoading(false); return; }
-    const json = await res.json();
-    setProperties(json.data ?? []);
-    setTotal(json.total ?? 0);
-    setTotalPages(json.total_pages ?? 1);
-    setLoading(false);
+    try {
+      const res = await fetch(`/api/admin/properties/manage?${params}`);
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        setError(body.error ?? `Server error (${res.status})`);
+        return;
+      }
+      const json = await res.json();
+      setProperties(json.data ?? []);
+      setTotal(json.total ?? 0);
+      setTotalPages(json.total_pages ?? 1);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Network error — could not reach server.");
+    } finally {
+      setLoading(false);
+    }
   }, [page, search, availFilter]);
 
   useEffect(() => { fetchProperties(); }, [fetchProperties]);

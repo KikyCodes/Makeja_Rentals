@@ -17,8 +17,8 @@ async function requireAdmin() {
 
 /** GET /api/admin/properties/manage — list all properties with images */
 export async function GET(req: NextRequest) {
-  const { error } = await requireAdmin();
-  if (error) return error;
+  const auth = await requireAdmin();
+  if (auth.error) return auth.error;
 
   const admin = createAdminClient();
   const sp = req.nextUrl.searchParams;
@@ -29,9 +29,10 @@ export async function GET(req: NextRequest) {
   const search = sp.get("search") ?? "";
   const available = sp.get("available");
 
+  // Fetch properties without embedded join (avoids PostgREST FK detection issues)
   let query = admin
     .from("properties")
-    .select("*, images:property_images(*)", { count: "exact" })
+    .select("*", { count: "exact" })
     .order("created_at", { ascending: false })
     .range(from, to);
 
@@ -39,11 +40,28 @@ export async function GET(req: NextRequest) {
   if (available === "true") query = query.eq("is_available", true);
   if (available === "false") query = query.eq("is_available", false);
 
-  const { data, error: dbError, count } = await query;
+  const { data: properties, error: dbError, count } = await query;
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
+  // Fetch images separately and attach them
+  const ids = (properties ?? []).map((p: Record<string, unknown>) => p.id as string);
+  let images: Record<string, unknown>[] = [];
+  if (ids.length > 0) {
+    const { data: imgData } = await admin
+      .from("property_images")
+      .select("*")
+      .in("property_id", ids)
+      .order("order", { ascending: true });
+    images = imgData ?? [];
+  }
+
+  const data = (properties ?? []).map((p: Record<string, unknown>) => ({
+    ...p,
+    images: images.filter((img) => img.property_id === p.id),
+  }));
+
   return NextResponse.json({
-    data: data ?? [],
+    data,
     total: count ?? 0,
     page,
     total_pages: Math.ceil((count ?? 0) / pageSize),
