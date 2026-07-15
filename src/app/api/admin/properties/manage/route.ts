@@ -28,30 +28,37 @@ export async function GET(req: NextRequest) {
   const to = from + pageSize - 1;
   const search = sp.get("search") ?? "";
   const available = sp.get("available");
+  const type = sp.get("type") ?? "";
+  const sort = sp.get("sort") ?? "newest";
 
-  // Fetch properties without embedded join (avoids PostgREST FK detection issues)
+  // Fetch properties — two-query approach avoids PostgREST FK join issues
   let query = admin
     .from("properties")
     .select("*", { count: "exact" })
-    .order("created_at", { ascending: false })
     .range(from, to);
 
-  if (search) query = query.ilike("title", `%${search}%`);
+  // Sorting
+  query = query.order("created_at", { ascending: sort === "oldest" });
+  if (sort === "price_asc") query = query.order("price", { ascending: true });
+  if (sort === "price_desc") query = query.order("price", { ascending: false });
+
+  // Filters
+  if (search) query = query.or(`title.ilike.%${search}%,location.ilike.%${search}%`);
   if (available === "true") query = query.eq("is_available", true);
   if (available === "false") query = query.eq("is_available", false);
+  if (type) query = query.eq("type", type);
 
   const { data: properties, error: dbError, count } = await query;
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-  // Fetch images separately and attach them
+  // Fetch images separately and attach
   const ids = (properties ?? []).map((p: Record<string, unknown>) => p.id as string);
   let images: Record<string, unknown>[] = [];
   if (ids.length > 0) {
     const { data: imgData } = await admin
       .from("property_images")
       .select("*")
-      .in("property_id", ids)
-      .order("order", { ascending: true });
+      .in("property_id", ids);
     images = imgData ?? [];
   }
 
