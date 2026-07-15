@@ -25,10 +25,10 @@ export async function GET(req: NextRequest) {
 
   const supabase = await createClient();
 
-  // Fetch properties + images in one query using the FK relationship
+  // ── Step 1: fetch properties (no embedded FK join to avoid schema cache issues) ──
   let query = supabase
     .from("properties")
-    .select("*, images:property_images(id, url, is_primary, order, property_id)", { count: "exact" });
+    .select("*", { count: "exact" });
 
   // Availability (default: only show available on public site)
   if (available === "true")  query = query.eq("is_available", true);
@@ -73,10 +73,25 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  // Normalise images array on each property
+  // ── Step 2: fetch images for all returned property IDs ─────────────────────
+  const ids = (data ?? []).map((p) => p.id as string).filter(Boolean);
+  let imagesByProperty: Record<string, unknown[]> = {};
+  if (ids.length > 0) {
+    const { data: imgData } = await supabase
+      .from("property_images")
+      .select("id, url, is_primary, order, property_id")
+      .in("property_id", ids);
+    for (const img of imgData ?? []) {
+      const pid = (img as { property_id: string }).property_id;
+      if (!imagesByProperty[pid]) imagesByProperty[pid] = [];
+      imagesByProperty[pid].push(img);
+    }
+  }
+
+  // ── Merge images into properties ────────────────────────────────────────────
   const properties = (data ?? []).map((p) => ({
     ...p,
-    images: Array.isArray(p.images) ? p.images : [],
+    images: imagesByProperty[p.id as string] ?? [],
   }));
 
   const total = count ?? 0;

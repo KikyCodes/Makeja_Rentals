@@ -35,9 +35,10 @@ export async function GET(req: NextRequest) {
   const type     = sp.get("type") ?? "";
   const sort     = sp.get("sort") ?? "newest";
 
+  // ── Step 1: fetch properties (no embedded FK join) ─────────────────────────
   let query = supabase
     .from("properties")
-    .select("*, images:property_images(id, url, is_primary, order, property_id)", { count: "exact" })
+    .select("*", { count: "exact" })
     .range(from, from + pageSize - 1);
 
   // Sorting
@@ -57,10 +58,25 @@ export async function GET(req: NextRequest) {
   const { data, error: dbError, count } = await query;
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
-  // Normalise images array
+  // ── Step 2: fetch images for the returned property IDs ──────────────────────
+  const ids = (data ?? []).map((p) => p.id as string).filter(Boolean);
+  let imagesByProperty: Record<string, unknown[]> = {};
+  if (ids.length > 0) {
+    const { data: imgData } = await supabase
+      .from("property_images")
+      .select("id, url, is_primary, order, property_id")
+      .in("property_id", ids);
+    for (const img of imgData ?? []) {
+      const pid = (img as { property_id: string }).property_id;
+      if (!imagesByProperty[pid]) imagesByProperty[pid] = [];
+      imagesByProperty[pid].push(img);
+    }
+  }
+
+  // ── Merge images into properties ────────────────────────────────────────────
   const properties = (data ?? []).map((p) => ({
     ...p,
-    images: Array.isArray(p.images) ? p.images : [],
+    images: imagesByProperty[p.id as string] ?? [],
   }));
 
   return NextResponse.json({

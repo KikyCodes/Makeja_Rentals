@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 
+const BUCKET = "property-images";
+
 async function requireAdmin() {
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
@@ -11,11 +13,27 @@ async function requireAdmin() {
   return { user };
 }
 
+/** Ensure the storage bucket exists; create it as public if not. */
+async function ensureBucket(admin: ReturnType<typeof createAdminClient>) {
+  const { data: existing } = await admin.storage.getBucket(BUCKET);
+  if (existing) return; // already exists
+
+  const { error } = await admin.storage.createBucket(BUCKET, {
+    public: true,
+    fileSizeLimit: 10 * 1024 * 1024, // 10 MB
+    allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif"],
+  });
+
+  // Ignore "already exists" race condition
+  if (error && !error.message.toLowerCase().includes("already exist")) {
+    throw new Error(`Could not create storage bucket: ${error.message}`);
+  }
+}
+
 /**
  * POST /api/admin/upload
- * Accepts a single image file via multipart/form-data and uploads it to
- * Supabase Storage using the service-role key (bypasses storage RLS).
- * Returns { url: string } on success.
+ * Accepts one image via multipart/form-data, uploads it to Supabase Storage
+ * using the service-role key (bypasses storage RLS), and returns { url }.
  */
 export async function POST(req: NextRequest) {
   const auth = await requireAdmin();
@@ -37,50 +55,41 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Image must be under 10 MB" }, { status: 400 });
   }
 
-  const ext  = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const name = `admin-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-  const path = `properties/${name}`;
-
+  const ext  = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "") || "jpg";
+  const path = `properties/admin-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
   const bytes  = await file.arrayBuffer();
   const buffer = Buffer.from(bytes);
 
-  // Try with admin (service role) first; fall back to anon client if key missing
-  let publicUrl: string | null = null;
-  let uploadError: string | null = null;
-
+  // ── Upload via service-role client ────────────────────────────────────────
+  let admin: ReturnType<typeof createAdminClient> | null = null;
   try {
-    const admin = createAdminClient();
-    const { error } = await admin.storage
-      .from("property-images")
-      .upload(path, buffer, { contentType: file.type, upsert: false });
-
-    if (error) {
-      uploadError = error.message;
-    } else {
-      const { data } = admin.storage.from("property-images").getPublicUrl(path);
-      publicUrl = data.publicUrl;
-    }
+    admin = createAdminClient();
   } catch {
-    // Service role key not configured — fall back to authenticated session upload
-    const supabase = await createClient();
-    const { error } = await supabase.storage
-      .from("property-images")
-      .upload(path, buffer, { contentType: file.type, upsert: false });
-
-    if (error) {
-      uploadError = error.message;
-    } else {
-      const { data } = supabase.storage.from("property-images").getPublicUrl(path);
-      publicUrl = data.publicUrl;
-    }
-  }
-
-  if (uploadError || !publicUrl) {
+    // SUPABASE_SERVICE_ROLE_KEY not set — cannot upload server-side
     return NextResponse.json(
-      { error: uploadError ?? "Upload failed — check that the property-images bucket exists in Supabase Storage" },
+      { error: "SUPABASE_SERVICE_ROLE_KEY is not configured on this server. Add it to your Netlify environment variables." },
       { status: 500 }
     );
   }
 
-  return NextResponse.json({ url: publicUrl });
+  // Ensure bucket exists (creates it automatically if missing)
+  try {
+    await ensureBucket(admin);
+  } catch (e) {
+    return NextResponse.json(
+      { error: e instanceof Error ? e.message : "Could not verify storage bucket" },
+      { status: 500 }
+    );
+  }
+
+  const { error: uploadError } = await admin.storage
+    .from(BUCKET)
+    .upload(path, buffer, { contentType: file.type, upsert: false });
+
+  if (uploadError) {
+    return NextResponse.json({ error: uploadError.message }, { status: 500 });
+  }
+
+  const { data: urlData } = admin.storage.from(BUCKET).getPublicUrl(path);
+  return NextResponse.json({ url: urlData.publicUrl });
 }
