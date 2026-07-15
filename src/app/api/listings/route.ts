@@ -1,96 +1,91 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MOCK_PROPERTIES } from "@/lib/mock-data";
-import type { Property, PaginatedResult } from "@/types";
+import { createClient } from "@/lib/supabase/server";
+import type { PaginatedResult, Property } from "@/types";
 
 /**
  * GET /api/listings
- *
- * Query params:
- *   q           — keyword search
- *   type        — property type
- *   area        — area name
- *   min         — min price
- *   max         — max price
- *   furnishing  — furnished | semi_furnished | unfurnished
- *   amenities   — comma-separated amenity list
- *   gender      — any | male | female
- *   distance    — max km from campus
- *   available   — true | false  (default: no filter)
- *   sort        — newest | price_asc | price_desc | popular | distance
- *   page        — page number (default 1)
- *   per_page    — results per page (default 12)
+ * Fetches real properties from Supabase with full filtering, sorting and pagination.
  */
 export async function GET(req: NextRequest) {
   const { searchParams } = req.nextUrl;
 
-  const q         = searchParams.get("q")?.toLowerCase().trim();
-  const type      = searchParams.get("type");
-  const area      = searchParams.get("area");
-  const min       = searchParams.get("min")       ? Number(searchParams.get("min"))       : null;
-  const max       = searchParams.get("max")       ? Number(searchParams.get("max"))       : null;
-  const furnishing = searchParams.get("furnishing");
+  const q          = searchParams.get("q")?.toLowerCase().trim() ?? "";
+  const type       = searchParams.get("type") ?? "";
+  const area       = searchParams.get("area") ?? "";
+  const min        = searchParams.get("min")  ? Number(searchParams.get("min"))  : null;
+  const max        = searchParams.get("max")  ? Number(searchParams.get("max"))  : null;
+  const furnishing = searchParams.get("furnishing") ?? "";
   const amenities  = searchParams.get("amenities")?.split(",").filter(Boolean) ?? [];
-  const gender     = searchParams.get("gender");
+  const gender     = searchParams.get("gender") ?? "";
   const distance   = searchParams.get("distance") ? Number(searchParams.get("distance")) : null;
-  const available  = searchParams.get("available");
+  const available  = searchParams.get("available") ?? "true"; // default: only available listings
   const sort       = searchParams.get("sort") ?? "newest";
   const page       = Math.max(1, Number(searchParams.get("page") ?? "1"));
   const perPage    = Math.min(24, Math.max(1, Number(searchParams.get("per_page") ?? "12")));
 
-  // ── Filter ─────────────────────────────────────────────────────────────────
-  let results: Property[] = MOCK_PROPERTIES.filter((p) => {
-    if (q) {
-      const haystack = `${p.title} ${p.description} ${p.location} ${p.area}`.toLowerCase();
-      if (!haystack.includes(q)) return false;
-    }
-    if (type && p.type !== type) return false;
-    if (area && p.area !== area) return false;
-    if (min !== null && p.price < min) return false;
-    if (max !== null && p.price > max) return false;
-    if (furnishing && p.furnishing !== furnishing) return false;
-    if (amenities.length > 0) {
-      if (!amenities.every((a) => p.amenities.includes(a))) return false;
-    }
-    if (gender && gender !== "any" && p.gender_preference !== "any" && p.gender_preference !== gender) return false;
-    if (distance !== null && p.distance_from_campus !== null) {
-      if (p.distance_from_campus > distance) return false;
-    }
-    if (available === "true"  && !p.is_available) return false;
-    if (available === "false" &&  p.is_available) return false;
-    return true;
-  });
+  const supabase = await createClient();
 
-  // ── Sort ────────────────────────────────────────────────────────────────────
-  switch (sort) {
-    case "price_asc":
-      results = results.sort((a, b) => a.price - b.price);
-      break;
-    case "price_desc":
-      results = results.sort((a, b) => b.price - a.price);
-      break;
-    case "popular":
-      results = results.sort((a, b) => b.views_count - a.views_count);
-      break;
-    case "distance":
-      results = results.sort((a, b) => (a.distance_from_campus ?? 999) - (b.distance_from_campus ?? 999));
-      break;
-    case "newest":
-    default:
-      results = results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  // Fetch properties + images in one query using the FK relationship
+  let query = supabase
+    .from("properties")
+    .select("*, images:property_images(id, url, is_primary, order, property_id)", { count: "exact" });
+
+  // Availability (default: only show available on public site)
+  if (available === "true")  query = query.eq("is_available", true);
+  if (available === "false") query = query.eq("is_available", false);
+
+  // Keyword search across title, description, location, area
+  if (q) {
+    query = query.or(
+      `title.ilike.%${q}%,description.ilike.%${q}%,location.ilike.%${q}%,area.ilike.%${q}%`
+    );
   }
 
-  // ── Paginate ────────────────────────────────────────────────────────────────
-  const total       = results.length;
-  const totalPages  = Math.ceil(total / perPage);
-  const offset      = (page - 1) * perPage;
-  const paged       = results.slice(offset, offset + perPage);
+  // Filters
+  if (type)       query = query.eq("type", type);
+  if (area)       query = query.eq("area", area);
+  if (furnishing) query = query.eq("furnishing", furnishing);
+  if (gender && gender !== "any") {
+    query = query.or(`gender_preference.eq.any,gender_preference.eq.${gender}`);
+  }
+  if (min !== null) query = query.gte("price", min);
+  if (max !== null) query = query.lte("price", max);
+  if (distance !== null) query = query.lte("distance_from_campus", distance);
+  if (amenities.length > 0) query = query.contains("amenities", amenities);
 
+  // Sorting
+  switch (sort) {
+    case "price_asc":  query = query.order("price", { ascending: true });           break;
+    case "price_desc": query = query.order("price", { ascending: false });          break;
+    case "popular":    query = query.order("views_count", { ascending: false });    break;
+    case "oldest":     query = query.order("created_at", { ascending: true });      break;
+    default:           query = query.order("created_at", { ascending: false });     break;
+  }
+
+  // Pagination
+  const from = (page - 1) * perPage;
+  query = query.range(from, from + perPage - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error("[/api/listings] Supabase error:", error.message);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  // Normalise images array on each property
+  const properties = (data ?? []).map((p) => ({
+    ...p,
+    images: Array.isArray(p.images) ? p.images : [],
+  }));
+
+  const total = count ?? 0;
   const body: PaginatedResult<Property> = {
-    data: paged,
+    data: properties as unknown as Property[],
     total,
     page,
     per_page: perPage,
-    total_pages: Math.max(1, totalPages),
+    total_pages: Math.max(1, Math.ceil(total / perPage)),
   };
 
   return NextResponse.json(body);

@@ -9,7 +9,6 @@ import {
   MapPin, Calendar, Tag, Home,
 } from "lucide-react";
 import Image from "next/image";
-import { createClient } from "@/lib/supabase/client";
 import { MACHAKOS_AREAS, PROPERTY_TYPES, AMENITIES_LIST, formatPrice, formatPropertyType } from "@/lib/utils";
 import type { Property, PropertyImage } from "@/types";
 import { cn } from "@/lib/utils";
@@ -83,36 +82,79 @@ function ImageUploader({
   onChange: (urls: string[]) => void;
 }) {
   const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
   const [urls, setUrls] = useState<string[]>(existingUrls);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { onChange(urls); }, [urls, onChange]);
+  // Sync to parent whenever urls changes
+  useEffect(() => { onChange(urls); }, [urls]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
+
     setUploading(true);
-    const supabase = createClient();
+    setUploadError(null);
     const newUrls: string[] = [];
 
     for (const file of Array.from(files)) {
-      const ext = file.name.split(".").pop() ?? "jpg";
-      const path = `properties/admin-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-      const { error } = await supabase.storage.from("property-images").upload(path, file, { upsert: false });
-      if (!error) {
-        const { data } = supabase.storage.from("property-images").getPublicUrl(path);
-        newUrls.push(data.publicUrl);
+      // Show an immediate local preview so the user sees something right away
+      const localPreview = URL.createObjectURL(file);
+      setUrls((prev) => [...prev, localPreview].slice(0, 10));
+
+      const fd = new FormData();
+      fd.append("file", file);
+
+      try {
+        const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+        const json = await res.json().catch(() => ({}));
+
+        if (!res.ok) {
+          // Remove the local preview we added optimistically
+          setUrls((prev) => prev.filter((u) => u !== localPreview));
+          setUploadError(json.error ?? `Upload failed (${res.status})`);
+          break;
+        }
+
+        // Replace the local blob URL with the permanent storage URL
+        setUrls((prev) => prev.map((u) => (u === localPreview ? json.url : u)));
+        newUrls.push(json.url);
+      } catch (e) {
+        setUrls((prev) => prev.filter((u) => u !== localPreview));
+        setUploadError(e instanceof Error ? e.message : "Network error during upload");
+        break;
       }
     }
 
-    setUrls((prev) => [...prev, ...newUrls].slice(0, 10));
+    // Reset the file input so the same file can be selected again
+    if (inputRef.current) inputRef.current.value = "";
     setUploading(false);
   };
 
-  const removeUrl = (url: string) => setUrls((prev) => prev.filter((u) => u !== url));
-  const moveFirst = (url: string) => setUrls((prev) => [url, ...prev.filter((u) => u !== url)]);
+  const removeUrl = (url: string) => {
+    URL.revokeObjectURL(url); // clean up any blob URLs
+    setUrls((prev) => prev.filter((u) => u !== url));
+  };
+
+  const moveFirst = (url: string) =>
+    setUrls((prev) => [url, ...prev.filter((u) => u !== url)]);
 
   return (
     <div className="space-y-3">
+      {/* Upload error banner */}
+      {uploadError && (
+        <div className="flex items-start gap-2 bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800 rounded-xl px-3 py-2.5">
+          <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-semibold text-red-700 dark:text-red-300">Upload failed</p>
+            <p className="text-xs text-red-600 dark:text-red-400 mt-0.5 break-words">{uploadError}</p>
+          </div>
+          <button type="button" onClick={() => setUploadError(null)} className="text-red-400 hover:text-red-600 flex-shrink-0">
+            <X className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Image grid */}
       {urls.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {urls.map((url, i) => (
@@ -122,6 +164,12 @@ function ImageUploader({
                 <span className="absolute top-1 left-1 text-[9px] font-bold bg-indigo-500 text-white px-1.5 py-0.5 rounded">
                   Primary
                 </span>
+              )}
+              {/* Show spinner on blob URLs (still uploading) */}
+              {url.startsWith("blob:") && (
+                <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <Loader2 className="w-5 h-5 text-white animate-spin" />
+                </div>
               )}
               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 transition-colors flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100">
                 {i !== 0 && (
@@ -152,22 +200,28 @@ function ImageUploader({
               disabled={uploading}
               className="aspect-video rounded-xl border-2 border-dashed border-slate-200 dark:border-slate-700 flex flex-col items-center justify-center gap-1 text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
             >
-              {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <><Upload className="w-4 h-4" /><span className="text-[10px] font-medium">Add</span></>}
+              {uploading
+                ? <Loader2 className="w-4 h-4 animate-spin" />
+                : <><Upload className="w-4 h-4" /><span className="text-[10px] font-medium">Add</span></>}
             </button>
           )}
         </div>
       )}
 
+      {/* Empty state drop zone */}
       {urls.length === 0 && (
         <button
           type="button"
           onClick={() => inputRef.current?.click()}
           disabled={uploading}
-          className="w-full border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl py-8 flex flex-col items-center gap-2 text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
+          className="w-full border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl py-10 flex flex-col items-center gap-2 text-slate-400 hover:border-indigo-400 hover:text-indigo-500 transition-colors disabled:opacity-50"
         >
-          {uploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <ImageIcon className="w-6 h-6" />}
+          {uploading
+            ? <Loader2 className="w-6 h-6 animate-spin" />
+            : <ImageIcon className="w-7 h-7" />}
           <p className="text-sm font-medium">{uploading ? "Uploading…" : "Click to upload photos"}</p>
-          <p className="text-xs">JPG, PNG, WebP · Max 10 photos · Hover photo to set primary or remove</p>
+          <p className="text-xs">JPG, PNG, WebP · up to 10 MB each · max 10 photos</p>
+          <p className="text-xs text-slate-300 dark:text-slate-600">Hover a photo to remove it or set it as the primary image</p>
         </button>
       )}
 

@@ -15,60 +15,56 @@ async function requireAdmin() {
   return { user };
 }
 
-/** GET /api/admin/properties/manage — list all properties with images */
+/** GET /api/admin/properties/manage — list all properties with images
+ *  Uses the authenticated session client (not service role) so it works
+ *  even when SUPABASE_SERVICE_ROLE_KEY is not set, and avoids the
+ *  'permission denied for table properties' grant error on service_role.
+ */
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
 
-  const admin = createAdminClient();
+  // Use the authenticated session — the admin's JWT gives full access
+  const supabase = await createClient();
   const sp = req.nextUrl.searchParams;
-  const page = Math.max(1, Number(sp.get("page") ?? "1"));
+  const page     = Math.max(1, Number(sp.get("page") ?? "1"));
   const pageSize = 20;
-  const from = (page - 1) * pageSize;
-  const to = from + pageSize - 1;
-  const search = sp.get("search") ?? "";
+  const from     = (page - 1) * pageSize;
+  const search   = sp.get("search") ?? "";
   const available = sp.get("available");
-  const type = sp.get("type") ?? "";
-  const sort = sp.get("sort") ?? "newest";
+  const type     = sp.get("type") ?? "";
+  const sort     = sp.get("sort") ?? "newest";
 
-  // Fetch properties — two-query approach avoids PostgREST FK join issues
-  let query = admin
+  let query = supabase
     .from("properties")
-    .select("*", { count: "exact" })
-    .range(from, to);
+    .select("*, images:property_images(id, url, is_primary, order, property_id)", { count: "exact" })
+    .range(from, from + pageSize - 1);
 
   // Sorting
-  query = query.order("created_at", { ascending: sort === "oldest" });
-  if (sort === "price_asc") query = query.order("price", { ascending: true });
-  if (sort === "price_desc") query = query.order("price", { ascending: false });
-
-  // Filters
-  if (search) query = query.or(`title.ilike.%${search}%,location.ilike.%${search}%`);
-  if (available === "true") query = query.eq("is_available", true);
-  if (available === "false") query = query.eq("is_available", false);
-  if (type) query = query.eq("type", type);
-
-  const { data: properties, error: dbError, count } = await query;
-  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
-
-  // Fetch images separately and attach
-  const ids = (properties ?? []).map((p: Record<string, unknown>) => p.id as string);
-  let images: Record<string, unknown>[] = [];
-  if (ids.length > 0) {
-    const { data: imgData } = await admin
-      .from("property_images")
-      .select("*")
-      .in("property_id", ids);
-    images = imgData ?? [];
+  switch (sort) {
+    case "oldest":     query = query.order("created_at", { ascending: true });  break;
+    case "price_asc":  query = query.order("price", { ascending: true });       break;
+    case "price_desc": query = query.order("price", { ascending: false });      break;
+    default:           query = query.order("created_at", { ascending: false }); break;
   }
 
-  const data = (properties ?? []).map((p: Record<string, unknown>) => ({
+  // Filters
+  if (search)            query = query.or(`title.ilike.%${search}%,location.ilike.%${search}%`);
+  if (available === "true")  query = query.eq("is_available", true);
+  if (available === "false") query = query.eq("is_available", false);
+  if (type)              query = query.eq("type", type);
+
+  const { data, error: dbError, count } = await query;
+  if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
+
+  // Normalise images array
+  const properties = (data ?? []).map((p) => ({
     ...p,
-    images: images.filter((img) => img.property_id === p.id),
+    images: Array.isArray(p.images) ? p.images : [],
   }));
 
   return NextResponse.json({
-    data,
+    data: properties,
     total: count ?? 0,
     page,
     total_pages: Math.ceil((count ?? 0) / pageSize),
