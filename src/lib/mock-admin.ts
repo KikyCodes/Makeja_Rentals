@@ -1,4 +1,4 @@
-import type {
+﻿import type {
   AdminStats,
   AdminUser,
   PropertyApprovalItem,
@@ -206,7 +206,7 @@ export const MOCK_PROPERTY_APPROVALS: PropertyApprovalItem[] = [
       is_available: true, is_verified: false, is_featured: false,
       views_count: 0, distance_from_campus: 0.4, gender_preference: "any",
       created_at: "2026-05-22T06:00:00Z", updated_at: "2026-05-22T06:00:00Z",
-      images: [{ id: "img1", property_id: "prop-new-1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400", is_primary: true, order: 0 }],
+      images: [{ id: "img1", property_id: "prop-new-1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400", is_primary: true, sort_order: 0 }],
     },
     landlord: {
       id: "u8", email: "hassan.ali@gmail.com", full_name: "Hassan Ali",
@@ -241,7 +241,7 @@ export const MOCK_PROPERTY_APPROVALS: PropertyApprovalItem[] = [
       is_available: true, is_verified: false, is_featured: false,
       views_count: 0, distance_from_campus: 1.2, gender_preference: "female",
       created_at: "2026-05-21T14:30:00Z", updated_at: "2026-05-21T14:30:00Z",
-      images: [{ id: "img2", property_id: "prop-new-2", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400", is_primary: true, order: 0 }],
+      images: [{ id: "img2", property_id: "prop-new-2", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=400", is_primary: true, sort_order: 0 }],
     },
     landlord: {
       id: "u2", email: "grace.njeri@gmail.com", full_name: "Grace Njeri",

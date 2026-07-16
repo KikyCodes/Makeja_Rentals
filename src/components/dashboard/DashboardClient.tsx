@@ -24,7 +24,7 @@ const MOCK_LISTINGS: Property[] = [
     is_available: true, is_verified: true, is_featured: true, views_count: 243,
     distance_from_campus: 0.3, gender_preference: "any",
     created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
-    images: [{ id: "i1", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400", is_primary: true, order: 0 }],
+    images: [{ id: "i1", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=400", is_primary: true, sort_order: 0 }],
   },
   {
     id: "2", landlord_id: "l1",

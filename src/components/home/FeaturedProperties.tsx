@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
@@ -32,7 +32,7 @@ const ALL_PROPERTIES: Property[] = [
     views_count: 243, distance_from_campus: 0.3, gender_preference: "any",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    images: [{ id: "i1", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: true, order: 0 }],
+    images: [{ id: "i1", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: true, sort_order: 0 }],
   },
   {
     id: "2",
@@ -58,7 +58,7 @@ const ALL_PROPERTIES: Property[] = [
     views_count: 189, distance_from_campus: 0.5, gender_preference: "any",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    images: [{ id: "i2", property_id: "2", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: true, order: 0 }],
+    images: [{ id: "i2", property_id: "2", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: true, sort_order: 0 }],
   },
   {
     id: "3",
@@ -84,7 +84,7 @@ const ALL_PROPERTIES: Property[] = [
     views_count: 312, distance_from_campus: 1.2, gender_preference: "any",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    images: [{ id: "i3", property_id: "3", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: true, order: 0 }],
+    images: [{ id: "i3", property_id: "3", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: true, sort_order: 0 }],
   },
   {
     id: "4",
@@ -110,7 +110,7 @@ const ALL_PROPERTIES: Property[] = [
     views_count: 98, distance_from_campus: 5.0, gender_preference: "any",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    images: [{ id: "i4", property_id: "4", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: true, order: 0 }],
+    images: [{ id: "i4", property_id: "4", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: true, sort_order: 0 }],
   },
   {
     id: "5",
@@ -136,7 +136,7 @@ const ALL_PROPERTIES: Property[] = [
     views_count: 421, distance_from_campus: 0.1, gender_preference: "male",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    images: [{ id: "i5", property_id: "5", url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", is_primary: true, order: 0 }],
+    images: [{ id: "i5", property_id: "5", url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", is_primary: true, sort_order: 0 }],
   },
   {
     id: "6",
@@ -162,7 +162,7 @@ const ALL_PROPERTIES: Property[] = [
     views_count: 167, distance_from_campus: 2.0, gender_preference: "any",
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
-    images: [{ id: "i6", property_id: "6", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: true, order: 0 }],
+    images: [{ id: "i6", property_id: "6", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: true, sort_order: 0 }],
   },
 ];
 

@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import Image from "next/image";
@@ -34,10 +34,10 @@ The neighborhood is calm, well-lit at night, and close to local shops, eateries,
   created_at: "2025-01-15T09:00:00Z", updated_at: "2025-05-10T12:00:00Z",
   landlord: { id: "l1", email: "john@example.com", full_name: "John Mwangi", avatar_url: null, phone: "+254712345678", role: "landlord", is_verified: true, created_at: "2024-06-01T00:00:00Z" },
   images: [
-    { id: "i1", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200", is_primary: true, order: 0 },
-    { id: "i2", property_id: "1", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200", is_primary: false, order: 1 },
-    { id: "i3", property_id: "1", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1200", is_primary: false, order: 2 },
-    { id: "i4", property_id: "1", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200", is_primary: false, order: 3 },
+    { id: "i1", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=1200", is_primary: true, sort_order: 0 },
+    { id: "i2", property_id: "1", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=1200", is_primary: false, sort_order: 1 },
+    { id: "i3", property_id: "1", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=1200", is_primary: false, sort_order: 2 },
+    { id: "i4", property_id: "1", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=1200", is_primary: false, sort_order: 3 },
   ],
 };
 

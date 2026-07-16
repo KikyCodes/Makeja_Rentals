@@ -1,4 +1,4 @@
-import type { Property } from "@/types";
+﻿import type { Property } from "@/types";
 
 export const MOCK_PROPERTIES: Property[] = [
   {
@@ -16,9 +16,9 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 2 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i1a", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: true, order: 0 },
-      { id: "i1b", property_id: "1", url: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800", is_primary: false, order: 1 },
-      { id: "i1c", property_id: "1", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: false, order: 2 },
+      { id: "i1a", property_id: "1", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: true, sort_order: 0 },
+      { id: "i1b", property_id: "1", url: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800", is_primary: false, sort_order: 1 },
+      { id: "i1c", property_id: "1", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: false, sort_order: 2 },
     ],
     landlord: { id: "l1", email: "landlord1@gmail.com", full_name: "Peter Mwangi", avatar_url: null, phone: "+254712345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -37,8 +37,8 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 5 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i2a", property_id: "2", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: true, order: 0 },
-      { id: "i2b", property_id: "2", url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", is_primary: false, order: 1 },
+      { id: "i2a", property_id: "2", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: true, sort_order: 0 },
+      { id: "i2b", property_id: "2", url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", is_primary: false, sort_order: 1 },
     ],
     landlord: { id: "l2", email: "landlord2@gmail.com", full_name: "Grace Mutua", avatar_url: null, phone: "+254722345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -57,8 +57,8 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 7 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i3a", property_id: "3", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: true, order: 0 },
-      { id: "i3b", property_id: "3", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: false, order: 1 },
+      { id: "i3a", property_id: "3", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: true, sort_order: 0 },
+      { id: "i3b", property_id: "3", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: false, sort_order: 1 },
     ],
     landlord: { id: "l3", email: "landlord3@gmail.com", full_name: "James Kioko", avatar_url: null, phone: "+254733345678", role: "landlord", is_verified: false, created_at: "" },
   },
@@ -77,7 +77,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 10 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i4a", property_id: "4", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: true, order: 0 },
+      { id: "i4a", property_id: "4", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l4", email: "landlord4@gmail.com", full_name: "Susan Waweru", avatar_url: null, phone: "+254744345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -96,7 +96,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 3 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i5a", property_id: "5", url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", is_primary: true, order: 0 },
+      { id: "i5a", property_id: "5", url: "https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l5", email: "landlord5@gmail.com", full_name: "John Musyoka", avatar_url: null, phone: "+254755345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -115,7 +115,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 14 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i6a", property_id: "6", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: true, order: 0 },
+      { id: "i6a", property_id: "6", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l6", email: "landlord6@gmail.com", full_name: "Mary Ndunge", avatar_url: null, phone: "+254766345678", role: "landlord", is_verified: false, created_at: "" },
   },
@@ -134,8 +134,8 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 1 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i7a", property_id: "7", url: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800", is_primary: true, order: 0 },
-      { id: "i7b", property_id: "7", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: false, order: 1 },
+      { id: "i7a", property_id: "7", url: "https://images.unsplash.com/photo-1586023492125-27b2c045efd7?w=800", is_primary: true, sort_order: 0 },
+      { id: "i7b", property_id: "7", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: false, sort_order: 1 },
     ],
     landlord: { id: "l7", email: "landlord7@gmail.com", full_name: "Agnes Kamau", avatar_url: null, phone: "+254777345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -154,7 +154,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 8 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i8a", property_id: "8", url: "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800", is_primary: true, order: 0 },
+      { id: "i8a", property_id: "8", url: "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l8", email: "landlord8@gmail.com", full_name: "Paul Mutuku", avatar_url: null, phone: "+254788345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -173,7 +173,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 6 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i9a", property_id: "9", url: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800", is_primary: true, order: 0 },
+      { id: "i9a", property_id: "9", url: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l9", email: "landlord9@gmail.com", full_name: "David Kimani", avatar_url: null, phone: "+254799345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -192,8 +192,8 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 4 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i10a", property_id: "10", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: true, order: 0 },
-      { id: "i10b", property_id: "10", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: false, order: 1 },
+      { id: "i10a", property_id: "10", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: true, sort_order: 0 },
+      { id: "i10b", property_id: "10", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: false, sort_order: 1 },
     ],
     landlord: { id: "l10", email: "landlord10@gmail.com", full_name: "Robert Omondi", avatar_url: null, phone: "+254700345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -212,7 +212,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 20 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i11a", property_id: "11", url: "https://images.unsplash.com/photo-1502672023488-70e25813eb80?w=800", is_primary: true, order: 0 },
+      { id: "i11a", property_id: "11", url: "https://images.unsplash.com/photo-1502672023488-70e25813eb80?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l11", email: "landlord11@gmail.com", full_name: "Alice Mwende", avatar_url: null, phone: "+254711345678", role: "landlord", is_verified: false, created_at: "" },
   },
@@ -231,7 +231,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 15 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i12a", property_id: "12", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: true, order: 0 },
+      { id: "i12a", property_id: "12", url: "https://images.unsplash.com/photo-1555041469-a586c61ea9bc?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l12", email: "landlord12@gmail.com", full_name: "Kevin Otieno", avatar_url: null, phone: "+254721345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -250,7 +250,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 30 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i13a", property_id: "13", url: "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800", is_primary: true, order: 0 },
+      { id: "i13a", property_id: "13", url: "https://images.unsplash.com/photo-1536376072261-38c75010e6c9?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l13", email: "landlord13@gmail.com", full_name: "Nancy Wanjiku", avatar_url: null, phone: "+254731345678", role: "landlord", is_verified: false, created_at: "" },
   },
@@ -269,7 +269,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 9 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i14a", property_id: "14", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: true, order: 0 },
+      { id: "i14a", property_id: "14", url: "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l7", email: "landlord7@gmail.com", full_name: "Agnes Kamau", avatar_url: null, phone: "+254777345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -288,8 +288,8 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 12 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i15a", property_id: "15", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: true, order: 0 },
-      { id: "i15b", property_id: "15", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: false, order: 1 },
+      { id: "i15a", property_id: "15", url: "https://images.unsplash.com/photo-1484154218962-a197022b5858?w=800", is_primary: true, sort_order: 0 },
+      { id: "i15b", property_id: "15", url: "https://images.unsplash.com/photo-1493809842364-78817add7ffb?w=800", is_primary: false, sort_order: 1 },
     ],
     landlord: { id: "l14", email: "landlord14@gmail.com", full_name: "George Muthui", avatar_url: null, phone: "+254741345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -308,7 +308,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 11 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i16a", property_id: "16", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: true, order: 0 },
+      { id: "i16a", property_id: "16", url: "https://images.unsplash.com/photo-1502672260266-1c1ef2d93688?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l15", email: "landlord15@gmail.com", full_name: "Faith Musau", avatar_url: null, phone: "+254751345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -327,7 +327,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 25 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i17a", property_id: "17", url: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800", is_primary: true, order: 0 },
+      { id: "i17a", property_id: "17", url: "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l16", email: "landlord16@gmail.com", full_name: "Bernard Mutia", avatar_url: null, phone: "+254761345678", role: "landlord", is_verified: true, created_at: "" },
   },
@@ -346,7 +346,7 @@ export const MOCK_PROPERTIES: Property[] = [
     created_at: new Date(Date.now() - 18 * 24 * 3600000).toISOString(),
     updated_at: new Date().toISOString(),
     images: [
-      { id: "i18a", property_id: "18", url: "https://images.unsplash.com/photo-1502672023488-70e25813eb80?w=800", is_primary: true, order: 0 },
+      { id: "i18a", property_id: "18", url: "https://images.unsplash.com/photo-1502672023488-70e25813eb80?w=800", is_primary: true, sort_order: 0 },
     ],
     landlord: { id: "l17", email: "landlord17@gmail.com", full_name: "Samuel Nzeki", avatar_url: null, phone: "+254771345678", role: "landlord", is_verified: false, created_at: "" },
   },
