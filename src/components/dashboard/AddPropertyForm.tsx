@@ -107,16 +107,14 @@ export default function AddPropertyForm({ initialData, isEditing }: Props) {
       const supabase = createClient();
       const imageUrls: string[] = existingImages.map((img) => img.url);
 
-      // Upload new images to Supabase Storage
+      // Upload new images via server-side API route (bypasses storage RLS)
       for (const file of images) {
-        const ext = file.name.split(".").pop();
-        const path = `properties/${user?.id ?? "demo"}-${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
-        const { error: uploadError } = await supabase.storage
-          .from("property-images")
-          .upload(path, file, { upsert: false });
-        if (uploadError) throw uploadError;
-        const { data: urlData } = supabase.storage.from("property-images").getPublicUrl(path);
-        imageUrls.push(urlData.publicUrl);
+        const fd = new FormData();
+        fd.append("file", file);
+        const uploadRes = await fetch("/api/admin/upload", { method: "POST", body: fd });
+        const uploadJson = await uploadRes.json().catch(() => ({}));
+        if (!uploadRes.ok) throw new Error(uploadJson.error ?? "Image upload failed");
+        imageUrls.push(uploadJson.url);
       }
 
       const payload = {
@@ -150,7 +148,7 @@ export default function AddPropertyForm({ initialData, isEditing }: Props) {
               property_id: inserted.id,
               url,
               is_primary: i === 0,
-              order: i,
+              sort_order: i,
             }))
           );
         }

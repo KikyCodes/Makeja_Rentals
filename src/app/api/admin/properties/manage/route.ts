@@ -15,17 +15,25 @@ async function requireAdmin() {
   return { user };
 }
 
-/** GET /api/admin/properties/manage — list all properties with images
- *  Uses the authenticated session client (not service role) so it works
- *  even when SUPABASE_SERVICE_ROLE_KEY is not set, and avoids the
- *  'permission denied for table properties' grant error on service_role.
+/**
+ * GET /api/admin/properties/manage — list all properties with images.
+ *
+ * Uses the service-role client (bypasses RLS) so the admin sees every property
+ * regardless of is_published / approval_status. Falls back to the session client
+ * if SUPABASE_SERVICE_ROLE_KEY is not configured (e.g. missing Netlify env var).
  */
 export async function GET(req: NextRequest) {
   const auth = await requireAdmin();
   if (auth.error) return auth.error;
 
-  // Use the authenticated session — the admin's JWT gives full access
-  const supabase = await createClient();
+  // Prefer service-role (bypasses RLS entirely); fall back to session client
+  let supabase: ReturnType<typeof createAdminClient> | Awaited<ReturnType<typeof createClient>>;
+  try {
+    supabase = createAdminClient();
+  } catch {
+    supabase = await createClient();
+  }
+
   const sp = req.nextUrl.searchParams;
   const page     = Math.max(1, Number(sp.get("page") ?? "1"));
   const pageSize = 20;
@@ -35,13 +43,12 @@ export async function GET(req: NextRequest) {
   const type     = sp.get("type") ?? "";
   const sort     = sp.get("sort") ?? "newest";
 
-  // ── Step 1: fetch properties (no embedded FK join) ─────────────────────────
+  // ── Step 1: fetch properties ────────────────────────────────────────────────
   let query = supabase
     .from("properties")
     .select("*", { count: "exact" })
     .range(from, from + pageSize - 1);
 
-  // Sorting
   switch (sort) {
     case "oldest":     query = query.order("created_at", { ascending: true });  break;
     case "price_asc":  query = query.order("price", { ascending: true });       break;
@@ -49,22 +56,21 @@ export async function GET(req: NextRequest) {
     default:           query = query.order("created_at", { ascending: false }); break;
   }
 
-  // Filters
-  if (search)            query = query.or(`title.ilike.%${search}%,location.ilike.%${search}%`);
+  if (search)                query = query.or(`title.ilike.%${search}%,location.ilike.%${search}%`);
   if (available === "true")  query = query.eq("is_available", true);
   if (available === "false") query = query.eq("is_available", false);
-  if (type)              query = query.eq("type", type);
+  if (type)                  query = query.eq("type", type);
 
   const { data, error: dbError, count } = await query;
   if (dbError) return NextResponse.json({ error: dbError.message }, { status: 500 });
 
   // ── Step 2: fetch images for the returned property IDs ──────────────────────
   const ids = (data ?? []).map((p) => p.id as string).filter(Boolean);
-  let imagesByProperty: Record<string, unknown[]> = {};
+  const imagesByProperty: Record<string, unknown[]> = {};
   if (ids.length > 0) {
     const { data: imgData } = await supabase
       .from("property_images")
-      .select("id, url, is_primary, order, property_id")
+      .select("id, url, is_primary, sort_order, property_id")
       .in("property_id", ids);
     for (const img of imgData ?? []) {
       const pid = (img as { property_id: string }).property_id;
@@ -73,7 +79,7 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // ── Merge images into properties ────────────────────────────────────────────
+  // ── Merge ──────────────────────────────────────────────────────────────────
   const properties = (data ?? []).map((p) => ({
     ...p,
     images: imagesByProperty[p.id as string] ?? [],
@@ -123,9 +129,11 @@ export async function POST(req: NextRequest) {
       gender_preference: body.gender_preference ?? "any",
       distance_from_campus: body.distance_from_campus ? Number(body.distance_from_campus) : null,
       is_available: body.is_available !== false,
-      is_verified: true,   // admin-created properties are auto-verified
+      is_published: true,          // admin-created properties go live immediately
+      approval_status: "approved", // admin-created properties are pre-approved
+      is_verified: true,
       is_featured: body.is_featured === true,
-      landlord_id: auth.user!.id, // admin owns it
+      landlord_id: auth.user!.id,
       views_count: 0,
     })
     .select()
@@ -141,7 +149,7 @@ export async function POST(req: NextRequest) {
         property_id: property.id,
         url,
         is_primary: i === 0,
-        order: i,
+        sort_order: i,
       }))
     );
   }
@@ -164,11 +172,11 @@ export async function PATCH(req: NextRequest) {
 
   const admin = createAdminClient();
 
-  // Whitelist updatable fields
   const allowed = [
     "title", "description", "type", "price", "price_period", "location", "area",
     "bedrooms", "bathrooms", "max_occupants", "furnishing", "amenities", "rules",
     "gender_preference", "distance_from_campus", "is_available", "is_featured", "is_verified",
+    "is_published", "approval_status",
   ];
   const safeUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const key of allowed) {
@@ -184,13 +192,13 @@ export async function PATCH(req: NextRequest) {
 
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 });
 
-  // Handle image replacements
+  // Handle image replacements — use sort_order (the actual column name)
   if (Array.isArray(updates.image_urls)) {
     await admin.from("property_images").delete().eq("property_id", id);
     const urls = updates.image_urls as string[];
     if (urls.length > 0) {
       await admin.from("property_images").insert(
-        urls.map((url, i) => ({ property_id: id, url, is_primary: i === 0, order: i }))
+        urls.map((url, i) => ({ property_id: id, url, is_primary: i === 0, sort_order: i }))
       );
     }
   }

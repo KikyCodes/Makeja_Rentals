@@ -59,7 +59,7 @@ export interface PropertyImage {
   property_id: string;
   url: string;
   is_primary: boolean;
-  order: number;
+  sort_order: number;
 }
 
 export interface Favorite {

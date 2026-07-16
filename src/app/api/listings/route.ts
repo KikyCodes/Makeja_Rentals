@@ -79,7 +79,7 @@ export async function GET(req: NextRequest) {
   if (ids.length > 0) {
     const { data: imgData } = await supabase
       .from("property_images")
-      .select("id, url, is_primary, order, property_id")
+      .select("id, url, is_primary, sort_order, property_id")
       .in("property_id", ids);
     for (const img of imgData ?? []) {
       const pid = (img as { property_id: string }).property_id;
