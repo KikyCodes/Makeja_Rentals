@@ -304,6 +304,12 @@ function PropertyForm({
     if (!form.title || !form.description || !form.price || !form.area || !form.location) {
       setError("Please fill in all required fields."); return;
     }
+    if (form.title.length < 10) {
+      setError("Title must be at least 10 characters."); return;
+    }
+    if (form.description.length < 30) {
+      setError("Description must be at least 30 characters."); return;
+    }
     setSaving(true); setError(null);
 
     const body = {
