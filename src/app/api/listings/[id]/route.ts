@@ -1,16 +1,50 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MOCK_PROPERTIES } from "@/lib/mock-data";
+import { createClient } from "@/lib/supabase/server";
 
-/** GET /api/listings/:id */
+/** GET /api/listings/:id — fetch a single property with images and landlord profile */
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
-  const property = MOCK_PROPERTIES.find((p) => p.id === id);
-  if (!property) {
+  const supabase = await createClient();
+
+  // ── 1. Fetch the property row ───────────────────────────────────────────────
+  const { data: property, error } = await supabase
+    .from("properties")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error || !property) {
     return NextResponse.json({ error: "Property not found" }, { status: 404 });
   }
-  // Increment views_count in a real app via Supabase RPC
-  return NextResponse.json({ data: { ...property, views_count: property.views_count + 1 } });
+
+  // ── 2. Fetch images (separate query — avoids PostgREST FK cache issues) ─────
+  const { data: images } = await supabase
+    .from("property_images")
+    .select("id, url, is_primary, sort_order, property_id")
+    .eq("property_id", id)
+    .order("sort_order", { ascending: true });
+
+  // ── 3. Fetch landlord profile ───────────────────────────────────────────────
+  const { data: landlord } = await supabase
+    .from("profiles")
+    .select("id, full_name, phone, avatar_url, is_verified, email, role")
+    .eq("id", property.landlord_id)
+    .single();
+
+  // ── 4. Record view (best-effort, never block the response) ──────────────────
+  supabase
+    .rpc("record_property_view", { p_property_id: id })
+    .then(() => {})
+    .catch(() => {});
+
+  return NextResponse.json({
+    data: {
+      ...property,
+      images: images ?? [],
+      landlord: landlord ?? null,
+    },
+  });
 }

@@ -134,6 +134,9 @@ export async function POST(req: NextRequest) {
       is_verified: true,
       is_featured: body.is_featured === true,
       landlord_id: auth.user!.id,
+      landlord_name: (body.landlord_name as string)?.trim() || null,
+      landlord_phone: (body.landlord_phone as string)?.trim() || null,
+      landlord_whatsapp: (body.landlord_whatsapp as string)?.trim() || null,
       views_count: 0,
     })
     .select()
@@ -177,6 +180,7 @@ export async function PATCH(req: NextRequest) {
     "bedrooms", "bathrooms", "max_occupants", "furnishing", "amenities", "rules",
     "gender_preference", "distance_from_campus", "is_available", "is_featured", "is_verified",
     "is_published", "approval_status",
+    "landlord_name", "landlord_phone", "landlord_whatsapp",
   ];
   const safeUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const key of allowed) {

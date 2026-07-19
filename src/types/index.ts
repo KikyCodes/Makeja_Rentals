@@ -47,6 +47,10 @@ export interface Property {
   views_count: number;
   distance_from_campus: number | null;  // in km
   gender_preference: GenderPreference;
+  // Landlord contact — stored directly on the property for per-listing customisation
+  landlord_name?: string | null;
+  landlord_phone?: string | null;
+  landlord_whatsapp?: string | null;
   created_at: string;
   updated_at: string;
   landlord?: Profile;

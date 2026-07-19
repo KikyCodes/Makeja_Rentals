@@ -246,6 +246,7 @@ interface FormState {
   furnishing: string; gender_preference: string; distance_from_campus: string;
   is_available: boolean; is_featured: boolean;
   amenities: string[]; rules: string[];
+  landlord_name: string; landlord_phone: string; landlord_whatsapp: string;
 }
 
 const BLANK_FORM: FormState = {
@@ -255,6 +256,7 @@ const BLANK_FORM: FormState = {
   furnishing: "semi_furnished", gender_preference: "any",
   distance_from_campus: "", is_available: true, is_featured: false,
   amenities: [], rules: [],
+  landlord_name: "", landlord_phone: "", landlord_whatsapp: "",
 };
 
 function fromProperty(p: PropertyWithImages): FormState {
@@ -268,6 +270,9 @@ function fromProperty(p: PropertyWithImages): FormState {
     distance_from_campus: p.distance_from_campus ? String(p.distance_from_campus) : "",
     is_available: p.is_available, is_featured: p.is_featured,
     amenities: p.amenities ?? [], rules: p.rules ?? [],
+    landlord_name: p.landlord_name ?? "",
+    landlord_phone: p.landlord_phone ?? "",
+    landlord_whatsapp: p.landlord_whatsapp ?? "",
   };
 }
 
@@ -320,6 +325,9 @@ function PropertyForm({
       bathrooms: Number(form.bathrooms),
       max_occupants: Number(form.max_occupants),
       distance_from_campus: form.distance_from_campus ? Number(form.distance_from_campus) : null,
+      landlord_name: form.landlord_name.trim() || null,
+      landlord_phone: form.landlord_phone.trim() || null,
+      landlord_whatsapp: form.landlord_whatsapp.trim() || null,
       image_urls: imageUrls,
     };
 
@@ -511,6 +519,31 @@ function PropertyForm({
             ))}
           </div>
         )}
+      </fieldset>
+
+      {/* Section: Landlord Contact */}
+      <fieldset>
+        <legend className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Landlord Contact</legend>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="sm:col-span-2">
+            <label className="label">Full Name</label>
+            <input className="input" value={form.landlord_name}
+              onChange={(e) => set("landlord_name", e.target.value)}
+              placeholder="e.g. John Kamau" />
+          </div>
+          <div>
+            <label className="label">Phone Number</label>
+            <input className="input" type="tel" value={form.landlord_phone}
+              onChange={(e) => set("landlord_phone", e.target.value)}
+              placeholder="e.g. 0712345678 or +254712345678" />
+          </div>
+          <div>
+            <label className="label">WhatsApp Number <span className="text-slate-400 font-normal">(optional — leave blank to use phone)</span></label>
+            <input className="input" type="tel" value={form.landlord_whatsapp}
+              onChange={(e) => set("landlord_whatsapp", e.target.value)}
+              placeholder="e.g. 0712345678" />
+          </div>
+        </div>
       </fieldset>
 
       {/* Section: Photos */}
