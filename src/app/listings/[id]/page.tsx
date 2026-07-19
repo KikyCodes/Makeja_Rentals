@@ -2,11 +2,12 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 import PropertyDetailClient from "@/components/property/PropertyDetailClient";
 
-export default function PropertyDetailPage({ params }: { params: { id: string } }) {
+export default async function PropertyDetailPage({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
   return (
     <>
       <Navbar />
-      <PropertyDetailClient id={params.id} />
+      <PropertyDetailClient id={id} />
       <Footer />
     </>
   );
