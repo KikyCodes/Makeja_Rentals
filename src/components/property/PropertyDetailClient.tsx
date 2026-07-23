@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   MapPin, Bed, Bath, Users, ShieldCheck, Heart,
   Share2, Phone, MessageCircle, ChevronLeft, ChevronRight,
@@ -28,9 +28,15 @@ export default function PropertyDetailClient({ id }: { id: string }) {
   const [liked, setLiked]       = useState(false);
   const [showContact, setShowContact] = useState(false);
 
+  // Compute sorted images before early returns (required for keyboard useEffect below)
+  const images = [...(property?.images ?? [])].sort((a, b) =>
+    a.is_primary ? -1 : b.is_primary ? 1 : (a.sort_order ?? 0) - (b.sort_order ?? 0)
+  );
+
   useEffect(() => {
     setLoading(true);
     setError(null);
+    setCurrentImage(0);
     fetch(`/api/listings/${id}`)
       .then((res) => res.json())
       .then((json) => {
@@ -40,6 +46,17 @@ export default function PropertyDetailClient({ id }: { id: string }) {
       .catch(() => setError("Failed to load property. Please try again."))
       .finally(() => setLoading(false));
   }, [id]);
+
+  // Keyboard navigation for gallery
+  useEffect(() => {
+    if (images.length <= 1) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "ArrowLeft")  setCurrentImage((i) => (i - 1 + images.length) % images.length);
+      if (e.key === "ArrowRight") setCurrentImage((i) => (i + 1) % images.length);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [images.length]);
 
   // ── Loading state ───────────────────────────────────────────────────────────
   if (loading) {
@@ -67,11 +84,6 @@ export default function PropertyDetailClient({ id }: { id: string }) {
       </main>
     );
   }
-
-  // Sort images: primary first, then by sort_order
-  const images = [...(property.images ?? [])].sort((a, b) =>
-    a.is_primary ? -1 : b.is_primary ? 1 : (a.sort_order ?? 0) - (b.sort_order ?? 0)
-  );
 
   const prev = () => setCurrentImage((i) => (i - 1 + images.length) % images.length);
   const next = () => setCurrentImage((i) => (i + 1) % images.length);
@@ -108,20 +120,31 @@ export default function PropertyDetailClient({ id }: { id: string }) {
 
             {/* Gallery */}
             <div className="relative rounded-3xl overflow-hidden bg-slate-100 dark:bg-slate-900 aspect-[16/10]">
-              {images.length > 0 ? (
-                <Image
-                  src={images[currentImage].url}
-                  alt={`${property.title} — photo ${currentImage + 1}`}
-                  fill
-                  className="object-cover"
-                  priority
-                  unoptimized
-                />
-              ) : (
-                <div className="absolute inset-0 flex items-center justify-center text-slate-300">
-                  <p className="text-sm">No photos yet</p>
-                </div>
-              )}
+              <AnimatePresence mode="wait" initial={false}>
+                {images.length > 0 ? (
+                  <motion.div
+                    key={currentImage}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.25 }}
+                    className="absolute inset-0"
+                  >
+                    <Image
+                      src={images[currentImage].url}
+                      alt={`${property.title} — photo ${currentImage + 1}`}
+                      fill
+                      className="object-cover"
+                      priority
+                      unoptimized
+                    />
+                  </motion.div>
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+                    <p className="text-sm">No photos yet</p>
+                  </div>
+                )}
+              </AnimatePresence>
 
               {images.length > 1 && (
                 <>
