@@ -35,10 +35,9 @@ export async function GET(
     .single();
 
   // ── 4. Record view (best-effort, never block the response) ──────────────────
-  supabase
-    .rpc("record_property_view", { p_property_id: id })
-    .then(() => {})
-    .catch(() => {});
+  void (async () => {
+    try { await supabase.rpc("record_property_view", { p_property_id: id }); } catch {}
+  })();
 
   return NextResponse.json({
     data: {
