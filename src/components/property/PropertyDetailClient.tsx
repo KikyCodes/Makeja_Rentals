@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 import {
   MapPin, Bed, Bath, Users, ShieldCheck, Heart,
   Share2, Phone, MessageCircle, ChevronLeft, ChevronRight,
-  Eye, Calendar, CheckCircle, XCircle, Zap, Loader2, AlertCircle,
+  Eye, Calendar, CheckCircle, XCircle, Zap, Loader2, AlertCircle, Mail, Building2,
 } from "lucide-react";
 import { formatPrice, formatPropertyType } from "@/lib/utils";
 import type { Property } from "@/types";
@@ -76,10 +76,14 @@ export default function PropertyDetailClient({ id }: { id: string }) {
   const prev = () => setCurrentImage((i) => (i - 1 + images.length) % images.length);
   const next = () => setCurrentImage((i) => (i + 1) % images.length);
 
-  // Resolve landlord contact — prefer per-property stored values, fall back to profile
-  const landlordName  = property.landlord_name  || property.landlord?.full_name  || "Landlord";
-  const landlordPhone = property.landlord_phone || property.landlord?.phone      || null;
-  const landlordWA    = property.landlord_whatsapp || landlordPhone;
+  // Resolve all landlord contact fields — property-level values take priority over profile
+  const landlordName       = property.landlord_name     || property.landlord?.full_name || "Landlord";
+  const landlordPhone      = property.landlord_phone    || property.landlord?.phone     || null;
+  const landlordWA         = property.landlord_whatsapp || landlordPhone;
+  const landlordEmail      = property.landlord_email    || property.landlord?.email     || null;
+  const landlordPhoto      = property.landlord_photo    || property.landlord?.avatar_url || null;
+  const landlordAgency     = property.landlord_agency   || null;
+  const landlordIsVerified = property.landlord_is_verified ?? property.landlord?.is_verified ?? false;
 
   const waNumber  = landlordWA ? toWhatsApp(landlordWA) : null;
   const waMessage = encodeURIComponent(
@@ -271,8 +275,8 @@ export default function PropertyDetailClient({ id }: { id: string }) {
                 </div>
 
                 {showContact ? (
-                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3">
-                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center mb-3 font-medium">
+                  <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-2.5">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-center font-medium">
                       Contact {landlordName}
                     </p>
 
@@ -282,7 +286,7 @@ export default function PropertyDetailClient({ id }: { id: string }) {
                         className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-green-600 hover:bg-green-700 text-white font-semibold text-sm transition-colors"
                       >
                         <Phone className="w-4 h-4" />
-                        {landlordPhone}
+                        Call {landlordPhone}
                       </a>
                     )}
 
@@ -298,7 +302,17 @@ export default function PropertyDetailClient({ id }: { id: string }) {
                       </a>
                     )}
 
-                    {!landlordPhone && !waNumber && (
+                    {landlordEmail && (
+                      <a
+                        href={`mailto:${landlordEmail}?subject=Enquiry: ${encodeURIComponent(property.title)}`}
+                        className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-slate-700 hover:bg-slate-800 text-white font-semibold text-sm transition-colors"
+                      >
+                        <Mail className="w-4 h-4" />
+                        Email Landlord
+                      </a>
+                    )}
+
+                    {!landlordPhone && !waNumber && !landlordEmail && (
                       <p className="text-center text-sm text-slate-400">No contact info available.</p>
                     )}
                   </motion.div>
@@ -323,26 +337,73 @@ export default function PropertyDetailClient({ id }: { id: string }) {
               {/* Landlord card */}
               <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-6 shadow-sm">
                 <h3 className="font-bold text-slate-900 dark:text-white text-sm mb-4">Listed by</h3>
+
+                {/* Avatar + identity */}
                 <div className="flex items-center gap-3 mb-4">
-                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                    {landlordName.charAt(0).toUpperCase()}
+                  <div className="w-14 h-14 rounded-full bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white font-bold text-lg shrink-0 overflow-hidden">
+                    {landlordPhoto ? (
+                      <Image
+                        src={landlordPhoto}
+                        alt={landlordName}
+                        width={56}
+                        height={56}
+                        className="object-cover w-full h-full"
+                        unoptimized
+                      />
+                    ) : (
+                      landlordName.charAt(0).toUpperCase()
+                    )}
                   </div>
-                  <div>
-                    <p className="font-semibold text-slate-900 dark:text-white text-sm">{landlordName}</p>
-                    {property.landlord?.is_verified && (
-                      <p className="flex items-center gap-1 text-green-600 text-xs font-medium">
+                  <div className="min-w-0">
+                    <p className="font-bold text-slate-900 dark:text-white text-sm truncate">{landlordName}</p>
+                    {landlordAgency && (
+                      <p className="flex items-center gap-1 text-slate-500 dark:text-slate-400 text-xs mt-0.5 truncate">
+                        <Building2 className="w-3 h-3 shrink-0" /> {landlordAgency}
+                      </p>
+                    )}
+                    {landlordIsVerified && (
+                      <p className="flex items-center gap-1 text-green-600 text-xs font-semibold mt-0.5">
                         <ShieldCheck className="w-3 h-3" /> Verified Landlord
                       </p>
                     )}
                   </div>
                 </div>
 
-                {landlordPhone && (
-                  <div className="text-sm text-slate-600 dark:text-slate-400 mb-1">
-                    <span className="font-medium text-slate-700 dark:text-slate-300">Phone: </span>
-                    {landlordPhone}
-                  </div>
-                )}
+                {/* Contact details */}
+                <div className="space-y-2 text-sm">
+                  {landlordPhone && (
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <Phone className="w-3.5 h-3.5 text-green-600 shrink-0" />
+                      <a href={`tel:${landlordPhone}`} className="hover:text-green-600 transition-colors font-medium truncate">
+                        {landlordPhone}
+                      </a>
+                    </div>
+                  )}
+                  {waNumber && (
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <MessageCircle className="w-3.5 h-3.5 text-[#25D366] shrink-0" />
+                      <a
+                        href={`https://wa.me/${waNumber}?text=${waMessage}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-[#25D366] transition-colors font-medium truncate"
+                      >
+                        WhatsApp
+                      </a>
+                    </div>
+                  )}
+                  {landlordEmail && (
+                    <div className="flex items-center gap-2 text-slate-600 dark:text-slate-400">
+                      <Mail className="w-3.5 h-3.5 text-blue-500 shrink-0" />
+                      <a
+                        href={`mailto:${landlordEmail}?subject=Enquiry: ${encodeURIComponent(property.title)}`}
+                        className="hover:text-blue-500 transition-colors font-medium truncate"
+                      >
+                        {landlordEmail}
+                      </a>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Safety tips */}

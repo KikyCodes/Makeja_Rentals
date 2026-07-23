@@ -237,6 +237,79 @@ function ImageUploader({
   );
 }
 
+// ─── Landlord Photo Uploader ──────────────────────────────────────────────────
+
+function LandlordPhotoUploader({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+}) {
+  const [uploading, setUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const handleFile = async (file: File | null) => {
+    if (!file) return;
+    setUploading(true);
+    setError(null);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/admin/upload", { method: "POST", body: fd });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(json.error ?? "Upload failed"); return; }
+      onChange(json.url);
+    } catch {
+      setError("Network error during upload");
+    } finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  };
+
+  return (
+    <div className="flex flex-col items-center gap-2 shrink-0">
+      <button
+        type="button"
+        onClick={() => inputRef.current?.click()}
+        disabled={uploading}
+        className="relative w-20 h-20 rounded-full overflow-hidden border-2 border-dashed border-slate-200 dark:border-slate-700 hover:border-indigo-400 transition-colors flex items-center justify-center bg-slate-50 dark:bg-slate-800 disabled:opacity-50"
+        title="Upload landlord photo"
+      >
+        {value ? (
+          <Image src={value} alt="Landlord" fill className="object-cover" unoptimized />
+        ) : uploading ? (
+          <Loader2 className="w-5 h-5 animate-spin text-slate-400" />
+        ) : (
+          <Upload className="w-5 h-5 text-slate-400" />
+        )}
+      </button>
+      <span className="text-[10px] text-slate-400 text-center leading-tight">
+        {value ? "Click to change" : "Photo\n(optional)"}
+      </span>
+      {error && <p className="text-[10px] text-red-500 text-center">{error}</p>}
+      {value && (
+        <button
+          type="button"
+          onClick={() => onChange("")}
+          className="text-[10px] text-red-400 hover:text-red-600"
+        >
+          Remove
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={(e) => handleFile(e.target.files?.[0] ?? null)}
+      />
+    </div>
+  );
+}
+
 // ─── Property Form ─────────────────────────────────────────────────────────────
 
 interface FormState {
@@ -247,6 +320,8 @@ interface FormState {
   is_available: boolean; is_featured: boolean;
   amenities: string[]; rules: string[];
   landlord_name: string; landlord_phone: string; landlord_whatsapp: string;
+  landlord_email: string; landlord_photo: string;
+  landlord_agency: string; landlord_is_verified: boolean;
 }
 
 const BLANK_FORM: FormState = {
@@ -257,6 +332,8 @@ const BLANK_FORM: FormState = {
   distance_from_campus: "", is_available: true, is_featured: false,
   amenities: [], rules: [],
   landlord_name: "", landlord_phone: "", landlord_whatsapp: "",
+  landlord_email: "", landlord_photo: "", landlord_agency: "",
+  landlord_is_verified: false,
 };
 
 function fromProperty(p: PropertyWithImages): FormState {
@@ -273,6 +350,10 @@ function fromProperty(p: PropertyWithImages): FormState {
     landlord_name: p.landlord_name ?? "",
     landlord_phone: p.landlord_phone ?? "",
     landlord_whatsapp: p.landlord_whatsapp ?? "",
+    landlord_email: p.landlord_email ?? "",
+    landlord_photo: p.landlord_photo ?? "",
+    landlord_agency: p.landlord_agency ?? "",
+    landlord_is_verified: p.landlord_is_verified ?? false,
   };
 }
 
@@ -328,6 +409,10 @@ function PropertyForm({
       landlord_name: form.landlord_name.trim() || null,
       landlord_phone: form.landlord_phone.trim() || null,
       landlord_whatsapp: form.landlord_whatsapp.trim() || null,
+      landlord_email: form.landlord_email.trim() || null,
+      landlord_photo: form.landlord_photo.trim() || null,
+      landlord_agency: form.landlord_agency.trim() || null,
+      landlord_is_verified: form.landlord_is_verified,
       image_urls: imageUrls,
     };
 
@@ -523,25 +608,62 @@ function PropertyForm({
 
       {/* Section: Landlord Contact */}
       <fieldset>
-        <legend className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Landlord Contact</legend>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div className="sm:col-span-2">
-            <label className="label">Full Name</label>
-            <input className="input" value={form.landlord_name}
-              onChange={(e) => set("landlord_name", e.target.value)}
-              placeholder="e.g. John Kamau" />
+        <legend className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Landlord / Contact Info</legend>
+
+        {/* Photo + Name row */}
+        <div className="flex items-start gap-4 mb-4">
+          {/* Avatar upload */}
+          <LandlordPhotoUploader
+            value={form.landlord_photo}
+            onChange={(url) => set("landlord_photo", url)}
+          />
+          <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="sm:col-span-2">
+              <label className="label">Full Name</label>
+              <input className="input" value={form.landlord_name}
+                onChange={(e) => set("landlord_name", e.target.value)}
+                placeholder="e.g. John Kamau" />
+            </div>
+            <div>
+              <label className="label">Agency / Company Name <span className="text-slate-400 font-normal">(optional)</span></label>
+              <input className="input" value={form.landlord_agency}
+                onChange={(e) => set("landlord_agency", e.target.value)}
+                placeholder="e.g. Kamau Properties" />
+            </div>
+            <div className="flex items-center gap-2 pt-6">
+              <input
+                type="checkbox"
+                id="landlord_is_verified"
+                checked={form.landlord_is_verified}
+                onChange={(e) => set("landlord_is_verified", e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 accent-indigo-500"
+              />
+              <label htmlFor="landlord_is_verified" className="text-sm font-medium text-slate-700 dark:text-slate-300 cursor-pointer">
+                Verified Landlord
+              </label>
+            </div>
           </div>
+        </div>
+
+        {/* Contact fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div>
             <label className="label">Phone Number</label>
             <input className="input" type="tel" value={form.landlord_phone}
               onChange={(e) => set("landlord_phone", e.target.value)}
-              placeholder="e.g. 0712345678 or +254712345678" />
+              placeholder="0712 345 678" />
           </div>
           <div>
-            <label className="label">WhatsApp Number <span className="text-slate-400 font-normal">(optional — leave blank to use phone)</span></label>
+            <label className="label">WhatsApp <span className="text-slate-400 font-normal">(if different)</span></label>
             <input className="input" type="tel" value={form.landlord_whatsapp}
               onChange={(e) => set("landlord_whatsapp", e.target.value)}
-              placeholder="e.g. 0712345678" />
+              placeholder="0712 345 678" />
+          </div>
+          <div>
+            <label className="label">Email Address <span className="text-slate-400 font-normal">(optional)</span></label>
+            <input className="input" type="email" value={form.landlord_email}
+              onChange={(e) => set("landlord_email", e.target.value)}
+              placeholder="landlord@example.com" />
           </div>
         </div>
       </fieldset>

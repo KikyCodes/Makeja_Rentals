@@ -137,6 +137,10 @@ export async function POST(req: NextRequest) {
       landlord_name: (body.landlord_name as string)?.trim() || null,
       landlord_phone: (body.landlord_phone as string)?.trim() || null,
       landlord_whatsapp: (body.landlord_whatsapp as string)?.trim() || null,
+      landlord_email: (body.landlord_email as string)?.trim() || null,
+      landlord_photo: (body.landlord_photo as string)?.trim() || null,
+      landlord_agency: (body.landlord_agency as string)?.trim() || null,
+      landlord_is_verified: body.landlord_is_verified === true,
       views_count: 0,
     })
     .select()
@@ -181,6 +185,7 @@ export async function PATCH(req: NextRequest) {
     "gender_preference", "distance_from_campus", "is_available", "is_featured", "is_verified",
     "is_published", "approval_status",
     "landlord_name", "landlord_phone", "landlord_whatsapp",
+    "landlord_email", "landlord_photo", "landlord_agency", "landlord_is_verified",
   ];
   const safeUpdates: Record<string, unknown> = { updated_at: new Date().toISOString() };
   for (const key of allowed) {

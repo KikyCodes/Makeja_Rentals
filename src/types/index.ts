@@ -51,6 +51,10 @@ export interface Property {
   landlord_name?: string | null;
   landlord_phone?: string | null;
   landlord_whatsapp?: string | null;
+  landlord_email?: string | null;
+  landlord_photo?: string | null;
+  landlord_agency?: string | null;
+  landlord_is_verified?: boolean;
   created_at: string;
   updated_at: string;
   landlord?: Profile;
