@@ -1,48 +1,81 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Plus, Eye, Edit, Trash2, MoreVertical, CheckCircle2, Clock,
-  Shield, ShieldOff, Search, SlidersHorizontal, Star,
+  Shield, ShieldOff, Search, Loader2, Home,
 } from "lucide-react";
 import { formatPrice, formatPropertyType } from "@/lib/utils";
-import { MOCK_PROPERTIES } from "@/lib/mock-data";
 import type { Property } from "@/types";
 
 export default function ListingsManager() {
-  const [listings, setListings] = useState<Property[]>(
-    MOCK_PROPERTIES.filter((p) => p.landlord_id === "l1" || ["1", "2", "3", "6"].includes(p.id))
-  );
-  const [search, setSearch] = useState("");
+  const [listings, setListings] = useState<Property[]>([]);
+  const [loading, setLoading]   = useState(true);
+  const [search, setSearch]     = useState("");
   const [filterAvail, setFilterAvail] = useState<"all" | "available" | "rented">("all");
   const [openMenu, setOpenMenu] = useState<string | null>(null);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/dashboard/listings")
+      .then((r) => r.json())
+      .then((json) => setListings(json.data ?? []))
+      .catch(() => setListings([]))
+      .finally(() => setLoading(false));
+  }, []);
 
   const filtered = listings.filter((l) => {
     const matchSearch = l.title.toLowerCase().includes(search.toLowerCase()) || l.area.toLowerCase().includes(search.toLowerCase());
-    const matchAvail = filterAvail === "all" ? true : filterAvail === "available" ? l.is_available : !l.is_available;
+    const matchAvail  = filterAvail === "all" ? true : filterAvail === "available" ? l.is_available : !l.is_available;
     return matchSearch && matchAvail;
   });
 
-  const toggleAvailability = (id: string) => {
-    setListings((prev) => prev.map((l) => l.id === id ? { ...l, is_available: !l.is_available } : l));
+  const toggleAvailability = async (id: string) => {
+    const listing = listings.find((l) => l.id === id);
+    if (!listing) return;
+    setBusy(id);
     setOpenMenu(null);
+
+    const next = !listing.is_available;
+    setListings((prev) => prev.map((l) => l.id === id ? { ...l, is_available: next } : l));
+
+    const res = await fetch("/api/dashboard/listings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, is_available: next }),
+    });
+    if (!res.ok) {
+      // Revert on failure
+      setListings((prev) => prev.map((l) => l.id === id ? { ...l, is_available: !next } : l));
+    }
+    setBusy(null);
   };
 
-  const deleteListing = (id: string) => {
-    setListings((prev) => prev.filter((l) => l.id !== id));
+  const deleteListing = async (id: string) => {
+    setBusy(id);
     setDeleteConfirm(null);
     setOpenMenu(null);
+    setListings((prev) => prev.filter((l) => l.id !== id));
+
+    const res = await fetch(`/api/dashboard/listings?id=${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      // Restore on failure
+      fetch("/api/dashboard/listings")
+        .then((r) => r.json())
+        .then((json) => setListings(json.data ?? []));
+    }
+    setBusy(null);
   };
 
   const stats = {
-    total: listings.length,
-    active: listings.filter((l) => l.is_available).length,
-    verified: listings.filter((l) => l.is_verified).length,
-    totalViews: listings.reduce((s, l) => s + l.views_count, 0),
+    total:      listings.length,
+    active:     listings.filter((l) => l.is_available).length,
+    verified:   listings.filter((l) => l.is_verified).length,
+    totalViews: listings.reduce((s, l) => s + (l.views_count ?? 0), 0),
   };
 
   return (
@@ -51,7 +84,9 @@ export default function ListingsManager() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 dark:text-white">My Listings</h1>
-          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">{stats.total} properties · {stats.active} available</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+            {loading ? "Loading…" : `${stats.total} properties · ${stats.active} available`}
+          </p>
         </div>
         <Link href="/dashboard/add" className="flex items-center gap-2 px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white font-bold text-sm rounded-xl transition-colors shadow-lg shadow-green-900/20">
           <Plus className="w-4 h-4" /> Add Property
@@ -61,9 +96,9 @@ export default function ListingsManager() {
       {/* Summary chips */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {[
-          { label: "Total",     value: stats.total,      color: "text-slate-700 dark:text-white",   bg: "bg-white dark:bg-slate-900" },
-          { label: "Active",    value: stats.active,     color: "text-green-700 dark:text-green-400",bg: "bg-green-50 dark:bg-green-950/40" },
-          { label: "Verified",  value: stats.verified,   color: "text-blue-700 dark:text-blue-400", bg: "bg-blue-50 dark:bg-blue-950/40" },
+          { label: "Total",      value: stats.total,      color: "text-slate-700 dark:text-white",    bg: "bg-white dark:bg-slate-900" },
+          { label: "Active",     value: stats.active,     color: "text-green-700 dark:text-green-400", bg: "bg-green-50 dark:bg-green-950/40" },
+          { label: "Verified",   value: stats.verified,   color: "text-blue-700 dark:text-blue-400",   bg: "bg-blue-50 dark:bg-blue-950/40" },
           { label: "Total Views",value: stats.totalViews.toLocaleString(), color: "text-purple-700 dark:text-purple-400", bg: "bg-purple-50 dark:bg-purple-950/40" },
         ].map((s) => (
           <div key={s.label} className={`${s.bg} rounded-2xl px-4 py-3 border border-slate-100 dark:border-slate-800`}>
@@ -99,11 +134,25 @@ export default function ListingsManager() {
 
       {/* Listings table */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden">
-        {filtered.length === 0 ? (
+        {loading ? (
+          <div className="py-16 flex items-center justify-center gap-2 text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Loading your listings…</span>
+          </div>
+        ) : filtered.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-4xl mb-3">🏠</p>
-            <p className="font-bold text-slate-700 dark:text-white mb-1">No listings found</p>
-            <p className="text-sm text-slate-400">Try adjusting your search or filters</p>
+            <Home className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+            <p className="font-bold text-slate-700 dark:text-white mb-1">
+              {listings.length === 0 ? "No listings yet" : "No listings match your search"}
+            </p>
+            <p className="text-sm text-slate-400 mb-4">
+              {listings.length === 0 ? "Add your first property to start attracting tenants." : "Try adjusting your search or filters"}
+            </p>
+            {listings.length === 0 && (
+              <Link href="/dashboard/add" className="inline-flex items-center gap-2 px-5 py-2.5 bg-green-600 text-white font-bold text-sm rounded-xl">
+                <Plus className="w-4 h-4" /> Add Property
+              </Link>
+            )}
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -121,115 +170,120 @@ export default function ListingsManager() {
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                 <AnimatePresence>
-                  {filtered.map((listing) => (
-                    <motion.tr
-                      key={listing.id}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
-                    >
-                      {/* Thumbnail + title */}
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-14 h-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
-                            {listing.images?.[0] ? (
-                              // eslint-disable-next-line @next/next/no-img-element
-                              <img src={listing.images[0].url} alt="" className="w-full h-full object-cover" />
-                            ) : (
-                              <div className="w-full h-full flex items-center justify-center text-slate-300 text-xs">No img</div>
-                            )}
+                  {filtered.map((listing) => {
+                    const thumb = listing.images?.[0];
+                    return (
+                      <motion.tr
+                        key={listing.id}
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: busy === listing.id ? 0.5 : 1 }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors"
+                      >
+                        {/* Thumbnail + title */}
+                        <td className="px-5 py-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-14 h-10 rounded-lg overflow-hidden bg-slate-100 dark:bg-slate-800 shrink-0">
+                              {thumb ? (
+                                <Image
+                                  src={thumb.url}
+                                  alt=""
+                                  width={56}
+                                  height={40}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Home className="w-4 h-4 text-slate-300" />
+                                </div>
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="font-semibold text-slate-800 dark:text-white truncate max-w-[180px]">{listing.title}</p>
+                              <p className="text-xs text-slate-400 truncate">{listing.location}</p>
+                            </div>
                           </div>
-                          <div className="min-w-0">
-                            <p className="font-semibold text-slate-800 dark:text-white truncate max-w-[180px]">{listing.title}</p>
-                            <p className="text-xs text-slate-400 truncate">{listing.location}</p>
+                        </td>
+
+                        <td className="px-3 py-3 hidden sm:table-cell">
+                          <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
+                            {formatPropertyType(listing.type)}
+                          </span>
+                        </td>
+
+                        <td className="px-3 py-3 text-right">
+                          <span className="font-bold text-green-600 text-sm">{formatPrice(listing.price)}</span>
+                          <span className="text-xs text-slate-400 block">/mo</span>
+                        </td>
+
+                        <td className="px-3 py-3 text-center hidden md:table-cell">
+                          <span className="font-semibold text-slate-700 dark:text-slate-300">{(listing.views_count ?? 0).toLocaleString()}</span>
+                        </td>
+
+                        <td className="px-3 py-3 text-center">
+                          {listing.is_available ? (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 text-xs font-semibold">
+                              <CheckCircle2 className="w-3 h-3" />Available
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-semibold">
+                              <Clock className="w-3 h-3" />Rented
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-3 text-center hidden lg:table-cell">
+                          {listing.is_verified ? (
+                            <span className="inline-flex items-center gap-1 text-blue-600 text-xs font-semibold">
+                              <Shield className="w-3.5 h-3.5" />Verified
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1 text-slate-400 text-xs">
+                              <ShieldOff className="w-3.5 h-3.5" />Pending
+                            </span>
+                          )}
+                        </td>
+
+                        <td className="px-3 py-3">
+                          <div className="relative flex justify-end">
+                            <button
+                              onClick={() => setOpenMenu(openMenu === listing.id ? null : listing.id)}
+                              className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                            >
+                              <MoreVertical className="w-4 h-4" />
+                            </button>
+                            <AnimatePresence>
+                              {openMenu === listing.id && (
+                                <motion.div
+                                  initial={{ opacity: 0, scale: 0.95, y: -4 }}
+                                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                                  exit={{ opacity: 0, scale: 0.95, y: -4 }}
+                                  transition={{ duration: 0.12 }}
+                                  className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl py-1 z-20"
+                                >
+                                  <Link href={`/listings/${listing.id}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                    <Eye className="w-4 h-4" />View listing
+                                  </Link>
+                                  <Link href={`/dashboard/edit/${listing.id}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
+                                    <Edit className="w-4 h-4" />Edit
+                                  </Link>
+                                  <button onClick={() => toggleAvailability(listing.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors w-full text-left">
+                                    <CheckCircle2 className="w-4 h-4" />
+                                    Mark as {listing.is_available ? "Rented" : "Available"}
+                                  </button>
+                                  <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" />
+                                  <button onClick={() => { setDeleteConfirm(listing.id); setOpenMenu(null); }} className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors w-full text-left">
+                                    <Trash2 className="w-4 h-4" />Delete
+                                  </button>
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
                           </div>
-                        </div>
-                      </td>
-
-                      {/* Type */}
-                      <td className="px-3 py-3 hidden sm:table-cell">
-                        <span className="text-xs px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-medium">
-                          {formatPropertyType(listing.type)}
-                        </span>
-                      </td>
-
-                      {/* Price */}
-                      <td className="px-3 py-3 text-right">
-                        <span className="font-bold text-green-600 text-sm">{formatPrice(listing.price)}</span>
-                        <span className="text-xs text-slate-400 block">/mo</span>
-                      </td>
-
-                      {/* Views */}
-                      <td className="px-3 py-3 text-center hidden md:table-cell">
-                        <span className="font-semibold text-slate-700 dark:text-slate-300">{listing.views_count.toLocaleString()}</span>
-                      </td>
-
-                      {/* Status */}
-                      <td className="px-3 py-3 text-center">
-                        {listing.is_available ? (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 text-xs font-semibold">
-                            <CheckCircle2 className="w-3 h-3" />Available
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 text-xs font-semibold">
-                            <Clock className="w-3 h-3" />Rented
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Verified */}
-                      <td className="px-3 py-3 text-center hidden lg:table-cell">
-                        {listing.is_verified ? (
-                          <span className="inline-flex items-center gap-1 text-blue-600 text-xs font-semibold">
-                            <Shield className="w-3.5 h-3.5" />Verified
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center gap-1 text-slate-400 text-xs">
-                            <ShieldOff className="w-3.5 h-3.5" />Pending
-                          </span>
-                        )}
-                      </td>
-
-                      {/* Actions */}
-                      <td className="px-3 py-3">
-                        <div className="relative flex justify-end">
-                          <button
-                            onClick={() => setOpenMenu(openMenu === listing.id ? null : listing.id)}
-                            className="p-2 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          >
-                            <MoreVertical className="w-4 h-4" />
-                          </button>
-                          <AnimatePresence>
-                            {openMenu === listing.id && (
-                              <motion.div
-                                initial={{ opacity: 0, scale: 0.95, y: -4 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                                transition={{ duration: 0.12 }}
-                                className="absolute right-0 top-full mt-1 w-44 bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 shadow-xl py-1 z-20"
-                              >
-                                <Link href={`/listings/${listing.id}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                  <Eye className="w-4 h-4" />View listing
-                                </Link>
-                                <Link href={`/dashboard/edit/${listing.id}`} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors">
-                                  <Edit className="w-4 h-4" />Edit
-                                </Link>
-                                <button onClick={() => toggleAvailability(listing.id)} className="flex items-center gap-2 px-4 py-2.5 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors w-full text-left">
-                                  <CheckCircle2 className="w-4 h-4" />
-                                  Mark as {listing.is_available ? "Rented" : "Available"}
-                                </button>
-                                <div className="h-px bg-slate-100 dark:bg-slate-700 my-1" />
-                                <button onClick={() => { setDeleteConfirm(listing.id); setOpenMenu(null); }} className="flex items-center gap-2 px-4 py-2.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors w-full text-left">
-                                  <Trash2 className="w-4 h-4" />Delete
-                                </button>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
                 </AnimatePresence>
               </tbody>
             </table>
@@ -254,7 +308,7 @@ export default function ListingsManager() {
                 <Trash2 className="w-6 h-6 text-red-500" />
               </div>
               <h3 className="text-center font-black text-slate-900 dark:text-white mb-1">Delete listing?</h3>
-              <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-6">This action cannot be undone. The listing will be permanently removed.</p>
+              <p className="text-center text-sm text-slate-500 dark:text-slate-400 mb-6">This action cannot be undone. The listing and all its photos will be permanently removed.</p>
               <div className="flex gap-3">
                 <button onClick={() => setDeleteConfirm(null)} className="flex-1 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 text-sm font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                   Cancel

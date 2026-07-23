@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Home, Mail, Phone, MapPin, Facebook, Twitter, Instagram, ArrowUpRight } from "lucide-react";
+import { Home, Mail, MapPin, Facebook, Twitter, Instagram, ArrowUpRight } from "lucide-react";
 
 const FOOTER_LINKS = {
   Platform: [
@@ -49,9 +49,6 @@ export default function Footer() {
             <div className="space-y-2.5 text-sm">
               <a href="mailto:hello@makejarentals.co.ke" className="flex items-center gap-2.5 text-slate-500 hover:text-green-400 transition-colors">
                 <Mail className="w-4 h-4 shrink-0" /> hello@makejarentals.co.ke
-              </a>
-              <a href="tel:+254700000000" className="flex items-center gap-2.5 text-slate-500 hover:text-green-400 transition-colors">
-                <Phone className="w-4 h-4 shrink-0" /> +254 700 000 000
               </a>
               <span className="flex items-center gap-2.5 text-slate-500">
                 <MapPin className="w-4 h-4 shrink-0" /> Machakos Town, Kenya

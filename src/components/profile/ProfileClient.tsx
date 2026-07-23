@@ -1,33 +1,97 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { User, Mail, Phone, ShieldCheck, Camera, Save, Loader2 } from "lucide-react";
+import { User, Mail, Phone, ShieldCheck, Camera, Save, Loader2, AlertCircle } from "lucide-react";
 import toast from "react-hot-toast";
+import { createClient } from "@/lib/supabase/client";
 
-const MOCK_PROFILE = {
-  full_name: "Grace Mwende",
-  email: "grace@example.com",
-  phone: "+254712345678",
-  role: "tenant" as const,
-  is_verified: false,
-  avatar_url: null as string | null,
-};
+interface ProfileData {
+  id: string;
+  full_name: string;
+  email: string;
+  phone: string;
+  role: string;
+  is_verified: boolean;
+  avatar_url: string | null;
+}
 
 export default function ProfileClient() {
-  const [profile, setProfile] = useState(MOCK_PROFILE);
-  const [loading, setLoading] = useState(false);
+  const [profile, setProfile]   = useState<ProfileData | null>(null);
+  const [loading, setLoading]   = useState(true);
+  const [saving, setSaving]     = useState(false);
+  const [error, setError]       = useState<string | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    (async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session?.user) {
+        setError("Not signed in");
+        setLoading(false);
+        return;
+      }
+      const { data, error: dbErr } = await supabase
+        .from("profiles")
+        .select("id, full_name, phone, avatar_url, role, is_verified")
+        .eq("id", session.user.id)
+        .single();
+
+      if (dbErr || !data) {
+        setError("Could not load profile");
+      } else {
+        setProfile({
+          id:          data.id,
+          full_name:   data.full_name ?? "",
+          email:       session.user.email ?? "",
+          phone:       data.phone ?? "",
+          role:        data.role ?? "tenant",
+          is_verified: data.is_verified ?? false,
+          avatar_url:  data.avatar_url ?? null,
+        });
+      }
+      setLoading(false);
+    })();
+  }, []);
 
   const handleSave = async () => {
-    setLoading(true);
-    try {
-      // Supabase update: await supabase.from("profiles").update(profile).eq("id", userId)
-      await new Promise((r) => setTimeout(r, 800));
+    if (!profile) return;
+    setSaving(true);
+    const supabase = createClient();
+    const { error: updateErr } = await supabase
+      .from("profiles")
+      .update({
+        full_name: profile.full_name.trim(),
+        phone:     profile.phone.trim(),
+      })
+      .eq("id", profile.id);
+
+    setSaving(false);
+    if (updateErr) {
+      toast.error("Failed to save: " + updateErr.message);
+    } else {
       toast.success("Profile updated!");
-    } finally {
-      setLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <main className="pt-16 min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
+      </main>
+    );
+  }
+
+  if (error || !profile) {
+    return (
+      <main className="pt-16 min-h-screen bg-slate-50 dark:bg-slate-950 flex items-center justify-center">
+        <div className="text-center">
+          <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-3" />
+          <p className="text-slate-600 dark:text-slate-400">{error ?? "Profile not found"}</p>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="pt-16 min-h-screen bg-slate-50 dark:bg-slate-950">
@@ -43,14 +107,14 @@ export default function ProfileClient() {
           <div className="flex items-center gap-6">
             <div className="relative">
               <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-green-400 to-emerald-600 flex items-center justify-center text-white text-2xl font-black">
-                {profile.full_name.charAt(0)}
+                {profile.full_name.charAt(0).toUpperCase() || "?"}
               </div>
               <button className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 flex items-center justify-center hover:bg-green-50 transition-colors">
                 <Camera className="w-3.5 h-3.5 text-slate-600 dark:text-slate-400" />
               </button>
             </div>
             <div>
-              <p className="font-bold text-slate-900 dark:text-white">{profile.full_name}</p>
+              <p className="font-bold text-slate-900 dark:text-white">{profile.full_name || "—"}</p>
               <p className="text-sm text-slate-500 dark:text-slate-400 capitalize">{profile.role}</p>
               {profile.is_verified ? (
                 <p className="flex items-center gap-1 text-green-600 text-xs font-medium mt-1">
@@ -84,7 +148,7 @@ export default function ProfileClient() {
                 <Mail className="w-4 h-4 text-slate-400 shrink-0" />
                 <input value={profile.email} readOnly className="flex-1 bg-transparent text-slate-800 dark:text-white outline-none text-sm cursor-not-allowed" />
               </div>
-              <p className="text-xs text-slate-400 mt-1">Email cannot be changed</p>
+              <p className="text-xs text-slate-400 mt-1">Email cannot be changed here</p>
             </div>
 
             <div>
@@ -103,11 +167,11 @@ export default function ProfileClient() {
 
           <button
             onClick={handleSave}
-            disabled={loading}
+            disabled={saving}
             className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-green-600 hover:bg-green-700 disabled:opacity-50 text-white font-bold text-sm transition-colors"
           >
-            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {loading ? "Saving..." : "Save Changes"}
+            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            {saving ? "Saving…" : "Save Changes"}
           </button>
         </motion.div>
       </div>
